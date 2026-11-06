@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const { codes, hashes } = makeBackupCodes();
   user.totpSecretEnc = enc;
   user.totpEnabled = true;
-  user.lastTotpStep = step;
+  user.lastTotpStep = 0; // Allow first login immediately after setup without waiting 30s
   user.backupHashes = hashes;
   await saveUser(user);
   await db().del(`totp:pending:${a.user.id}`);
