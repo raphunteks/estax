@@ -89,7 +89,8 @@ export default function LoginForm({ next }: { next?: string }) {
     setBusy(false);
     if (!d?.ok) {
       setCode("");
-      setErr(d?.code === "invalid" ? "Kode salah atau sudah dipakai." : (MESSAGES[d?.code] ?? "Terjadi kesalahan."));
+      const msg = d?.message || (d?.code === "invalid" ? "Kode verifikasi salah atau sudah dipakai." : (MESSAGES[d?.code] ?? "Kode verifikasi salah atau kedaluwarsa. Silakan coba lagi."));
+      setErr(msg);
       shake(card.current);
       if (d?.code === "expired") setStep("cred");
       return;

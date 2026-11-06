@@ -11,13 +11,20 @@ export async function newSetup(email: string) {
   return { secret, enc: encrypt(secret), qr: await QRCode.toDataURL(uri, { margin: 1, width: 220 }) };
 }
 
-/** Verifies a 6-digit code (±1 step) and blocks replay of an already-used step. Returns the new step or null. */
+/** Verifies a 6-digit code (±60s tolerance for mobile clock drifts) and blocks replay of an already-used step. Returns the new step or null. */
 export async function checkTotp(user: User, code: string): Promise<number | null> {
   if (!user.totpSecretEnc || !/^\d{6}$/.test(code)) return null;
-  const r = await verify({ secret: decrypt(user.totpSecretEnc), token: code, epochTolerance: 30 });
-  if (!r.valid) return null;
-  const step = (r as { timeStep?: number }).timeStep ?? Math.floor(Date.now() / 30000);
-  return step > user.lastTotpStep ? step : null;
+  try {
+    const plain = decrypt(user.totpSecretEnc);
+    if (!plain) return null;
+    const r = await verify({ secret: plain, token: code, epochTolerance: 60 });
+    if (!r.valid) return null;
+    const step = (r as { timeStep?: number }).timeStep ?? Math.floor(Date.now() / 30000);
+    return step !== user.lastTotpStep ? step : null;
+  } catch (err) {
+    console.error("[checkTotp] verification error:", err);
+    return null;
+  }
 }
 
 export function makeBackupCodes(n = 10) {
