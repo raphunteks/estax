@@ -8,7 +8,7 @@ import { canAccessPath, navFor } from "@/lib/routes";
 
 export const metadata: Metadata = { title: { default: "Dashboard", template: "%s · Estaka" }, robots: { index: false } };
 export const dynamic = "force-dynamic";
-const LIVE = ["/dashboard", "/dashboard/akun", "/dashboard/audit", "/dashboard/tim", "/dashboard/pengaturan", "/dashboard/pasien", "/dashboard/janji", "/dashboard/periksa", "/dashboard/situs", "/dashboard/kasir", "/dashboard/farmasi", "/dashboard/analitik", "/dashboard/ai"];
+const LIVE = ["/dashboard", "/dashboard/akun", "/dashboard/audit", "/dashboard/tim", "/dashboard/pengaturan", "/dashboard/pasien", "/dashboard/janji", "/dashboard/periksa", "/dashboard/situs", "/dashboard/kasir", "/dashboard/farmasi", "/dashboard/analitik", "/dashboard/ai", "/dashboard/promosi", "/dashboard/pesan", "/dashboard/survei", "/dashboard/recall"];
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const a = await getAuth();

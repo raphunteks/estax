@@ -6,8 +6,9 @@ import { clinic } from "@/lib/content";
 import { hermesConfigured, sendWhatsApp } from "@/lib/notify/hermes";
 import { sendMail, siteUrl } from "@/lib/mail";
 import { getUser } from "@/lib/auth/users";
-import { listAppts, type Appt } from "./appointments";
+import { listAppts, pushPatient, type Appt } from "./appointments";
 import { getPatient } from "./patients";
+import { runRecallReminders } from "./care";
 import { addDays, epoch, todayWita } from "./time";
 
 const dayName = (d: string) => new Date(`${d}T12:00:00+08:00`).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -44,6 +45,7 @@ export async function runReminders(now = Date.now()) {
     const h = (epoch(a.date, a.time) - now) / 3600e3;
     if (s.wa.email !== false) {
       const kind = h <= 2 ? "e2" : h <= 24 ? "e24" : null;
+      if (kind && (await once(`${a.id}:push:${kind}`))) await pushPatient(a.patientId, kind === "e2" ? "Janji 2 jam lagi" : "Pengingat janji besok", `${dayName(a.date)}, pukul ${a.time} WITA.`).catch(() => null);
       if (kind) {
         if (kind === "e2") await once(`${a.id}:e24`); // never send the day-before mail after the 2-hour one
         if (await once(`${a.id}:${kind}`)) {
@@ -60,5 +62,6 @@ export async function runReminders(now = Date.now()) {
       if (r.ok) res.wa++; else if (r.reason !== "already_sent" && r.reason !== "no_phone") res.failed++;
     }
   }
-  return res;
+  const recall = await runRecallReminders().catch(() => 0);
+  return { ...res, recall };
 }

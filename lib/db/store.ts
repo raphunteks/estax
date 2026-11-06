@@ -192,11 +192,11 @@ function upstashStore(r: Redis): Store {
 let store: Store | null = null;
 export function db(): Store {
   if (store) return store;
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (url && token) store = upstashStore(new Redis({ url, token }));
   else if (process.env.NODE_ENV === "production") throw new Error("UPSTASH_REDIS_REST_URL/TOKEN are required in production");
   else store = memoryStore();
   return store;
 }
-export const isDevStore = () => !((process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) && (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN));
+export const isDevStore = () => !(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);

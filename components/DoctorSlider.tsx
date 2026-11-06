@@ -390,16 +390,16 @@ export default function DoctorSlider() {
           style={{ perspective: "1400px" }}
         >
           <div className="cs-layer absolute inset-0">
-            <svg className="cs-ring cs-a absolute left-1/2 md:left-[54%] lg:left-[52%] top-[48%] size-[min(78vw,560px)] -translate-x-1/2 -translate-y-1/2 text-accent/50" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+            <svg className="cs-ring cs-a absolute left-1/2 top-[48%] size-[min(78vw,560px)] -translate-x-1/2 -translate-y-1/2 text-accent/50" viewBox="0 0 100 100" fill="none" aria-hidden="true">
               <g className="spin-slow" style={{ animationDuration: "120s" }}>
                 <circle cx="50" cy="50" r="49" stroke="currentColor" strokeWidth="0.25" strokeDasharray="0.6 2.4" strokeLinecap="round" />
                 <circle cx="50" cy="50" r="40" stroke="var(--line)" strokeWidth="0.3" />
               </g>
             </svg>
-            <div className="cs-ground cs-a absolute bottom-[6%] left-1/2 md:left-[54%] lg:left-[52%] h-4 w-[min(70vw,520px)] -translate-x-1/2 rounded-[50%] blur-md" style={{ background: "radial-gradient(closest-side, color-mix(in srgb, var(--accent) 45%, transparent), transparent)" }} aria-hidden="true" />
+            <div className="cs-ground cs-a absolute bottom-[6%] left-1/2 h-4 w-[min(70vw,520px)] -translate-x-1/2 rounded-[50%] blur-md" style={{ background: "radial-gradient(closest-side, color-mix(in srgb, var(--accent) 45%, transparent), transparent)" }} aria-hidden="true" />
 
             {doctors.map((doc, i) => (
-              <div key={doc.id} className="cs-slide absolute bottom-0 left-1/2 md:left-[54%] lg:left-[52%] w-[clamp(180px,min(30vw,44vh),380px)] mpin:w-[clamp(150px,min(56vw,calc((100svh-430px)*0.75)),340px)] will-change-transform [transform-style:preserve-3d]">
+              <div key={doc.id} className="cs-slide absolute bottom-0 left-1/2 w-[clamp(200px,min(34vw,46vh),400px)] mpin:w-[clamp(150px,min(56vw,calc((100svh-430px)*0.75)),340px)] lg:w-[clamp(180px,min(30vw,calc((100svh-330px)*0.75)),400px)] will-change-transform [transform-style:preserve-3d]">
                 <div className="cs-portrait cs-a">
                   <button
                     type="button"
@@ -432,20 +432,20 @@ export default function DoctorSlider() {
           </div>
         </div>
 
-        {/* Info panel (left side) */}
-        <div className="cs-info cs-a relative z-20 mx-auto mt-4 w-full max-w-6xl px-4 sm:px-6 md:pointer-events-none md:absolute md:inset-x-0 md:inset-y-0 md:mt-0">
-          <div className="glass pointer-events-auto rounded-3xl p-6 md:absolute md:left-6 md:top-1/2 md:max-h-[90%] md:w-[280px] md:-translate-y-1/2 md:overflow-y-auto lg:w-[320px] xl:w-[350px] [@media(min-width:768px)_and_(max-height:760px)]:p-4" style={{ backdropFilter: "blur(24px) saturate(160%)" }}>
+        {/* Info panel (left) */}
+        <div className="cs-info cs-a relative z-20 mx-auto mt-2 w-full max-w-6xl px-4 sm:px-6 mpin:mt-1 mpin:shrink-0 lg:pointer-events-none lg:absolute lg:inset-x-0 lg:inset-y-0 lg:mt-0">
+          <div className="glass pointer-events-auto rounded-3xl p-6 mpin:p-4 lg:absolute lg:left-6 lg:top-1/2 lg:max-h-full lg:w-[300px] lg:-translate-y-1/2 lg:overflow-y-auto xl:w-[330px] [@media(min-width:1024px)_and_(max-height:760px)]:p-4" style={{ backdropFilter: "blur(24px) saturate(160%)" }}>
             <p className="cs-swap eyebrow">
               <L v={d.role} />
             </p>
-            <h3 className="cs-swap display mt-3 text-3xl leading-[1.05] md:text-2xl lg:text-3xl">{d.name}</h3>
-            <p className="cs-swap mt-3 text-sm leading-relaxed text-muted">
+            <h3 className="cs-swap display mt-3 text-3xl leading-[1.05] mpin:mt-1.5 mpin:text-2xl">{d.name}</h3>
+            <p className="cs-swap mt-3 text-sm leading-relaxed text-muted mpin:hidden">
               <L v={d.bio} />
             </p>
-            <p className="cs-swap mt-5 text-[0.68rem] uppercase tracking-[0.2em] text-muted">
+            <p className="cs-swap mt-5 text-[0.68rem] uppercase tracking-[0.2em] text-muted mpin:hidden">
               <L v={c.focusLabel} />
             </p>
-            <ul className="mt-2 space-y-1.5 text-sm">
+            <ul className="mt-2 space-y-1.5 text-sm mpin:hidden">
               {d.focus.map((f, i) => (
                 <li key={i} className="cs-swap flex items-center gap-2">
                   <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
@@ -453,13 +453,13 @@ export default function DoctorSlider() {
                 </li>
               ))}
             </ul>
-            <button type="button" onClick={(e) => openProfile(e.currentTarget)} className="cs-swap btn btn-ghost mt-6 w-full">
+            <button type="button" onClick={(e) => openProfile(e.currentTarget)} className="cs-swap btn btn-ghost mt-6 w-full mpin:mt-3">
               <L v={c.profile} />
             </button>
           </div>
 
-          {/* HUD (right side) */}
-          <div className="cs-hud pointer-events-auto mt-4 hidden items-end gap-3 md:absolute md:inset-y-0 md:right-6 md:my-auto md:flex md:h-fit md:flex-col" aria-hidden="true">
+          {/* HUD (right) */}
+          <div className="cs-hud pointer-events-auto mt-4 hidden items-end gap-3 lg:absolute lg:inset-y-0 lg:right-6 lg:my-auto lg:flex lg:h-fit lg:flex-col" aria-hidden="true">
             <p className="display text-6xl leading-none text-fg">
               0{active + 1}
               <span className="text-2xl text-muted"> / 0{N}</span>

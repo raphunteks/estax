@@ -187,16 +187,71 @@ function RulesForm({ canEdit }: { canEdit: boolean }) {
   );
 }
 
+type Feat = { checkinWindowMin: number; recallRemindDays: number; surveyEnabled: boolean; recall: { id: string; name: string; days: number }[] };
+function Features({ canEdit }: { canEdit: boolean }) {
+  const { data, setData, msg, save } = useMaster<Feat>("features");
+  if (!data) return <Skeleton />;
+  const num = (k: "checkinWindowMin" | "recallRemindDays", label: string, hint: string) => (
+    <Field label={label} hint={hint}><Input type="number" min={0} disabled={!canEdit} value={data[k]} onChange={(e) => setData({ ...data, [k]: Number(e.target.value) })} /></Field>
+  );
+  const setR = (i: number, p: Partial<Feat["recall"][number]>) => setData({ ...data, recall: data.recall.map((r, j) => (j === i ? { ...r, ...p } : r)) });
+  return (
+    <Card title="Fitur pasien">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {num("checkinWindowMin", "Jendela tombol “Saya sudah tiba” (menit)", "Pasien baru bisa check-in mandiri sekian menit sebelum jam janji.")}
+        {num("recallRemindDays", "Pengingat kontrol (hari sebelumnya)", "Notifikasi otomatis ke pasien sebelum tanggal kontrol/recall.")}
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="size-4" disabled={!canEdit} checked={data.surveyEnabled} onChange={(e) => setData({ ...data, surveyEnabled: e.target.checked })} />Kirim survei kepuasan setelah kunjungan</label>
+      </div>
+      <h3 className="mb-2 mt-6 text-sm font-medium">Preset kontrol / recall (dipilih dokter di pemeriksaan)</h3>
+      <ul className="space-y-2">
+        {data.recall.map((r, i) => (
+          <li key={r.id} className="grid grid-cols-[1fr_6rem_auto] gap-2"><Input aria-label="Nama" disabled={!canEdit} value={r.name} onChange={(e) => setR(i, { name: e.target.value })} /><Input aria-label="Hari" type="number" min={1} disabled={!canEdit} value={r.days} onChange={(e) => setR(i, { days: Number(e.target.value) })} />
+            {canEdit && <button className="btn btn-ghost min-h-10" onClick={() => setData({ ...data, recall: data.recall.filter((_, j) => j !== i) })}>Hapus</button>}</li>
+        ))}
+      </ul>
+      {canEdit && <button className="btn btn-ghost mt-2 min-h-10" onClick={() => setData({ ...data, recall: [...data.recall, { id: `r-${Date.now().toString(36)}`, name: "Kontrol baru", days: 30 }] })}>+ Preset</button>}
+      <Save canEdit={canEdit} msg={msg} onClick={save} />
+    </Card>
+  );
+}
+
+type Doc = { id: string; title: string; body: string; active: boolean; keywords?: string };
+function DocEditor({ kind, title, canEdit, keywords }: { kind: "consent" | "edu"; title: string; canEdit: boolean; keywords?: boolean }) {
+  const { data, setData, msg, save } = useMaster<Doc[]>(kind);
+  if (!data) return <Skeleton />;
+  const set = (i: number, p: Partial<Doc>) => setData(data.map((d, j) => (j === i ? { ...d, ...p } : d)));
+  return (
+    <Card title={title}>
+      <ul className="space-y-4">
+        {data.map((d, i) => (
+          <li key={d.id} className="rounded-xl border border-line p-3">
+            <div className="flex gap-2"><Input aria-label="Judul" disabled={!canEdit} value={d.title} onChange={(e) => set(i, { title: e.target.value })} />
+              <label className="flex shrink-0 items-center gap-1 text-xs"><input type="checkbox" className="size-4" disabled={!canEdit} checked={d.active} onChange={(e) => set(i, { active: e.target.checked })} />Aktif</label></div>
+            <textarea aria-label="Isi" rows={5} disabled={!canEdit} value={d.body} onChange={(e) => set(i, { body: e.target.value })} className="mt-2 w-full rounded-xl border border-line bg-transparent p-3 text-sm" />
+            {keywords && <Input className="mt-2" aria-label="Kata kunci tindakan" placeholder="Kata kunci tindakan (pisahkan koma), mis. cabut, ekstraksi" disabled={!canEdit} value={d.keywords ?? ""} onChange={(e) => set(i, { keywords: e.target.value })} />}
+            {canEdit && <button className="btn btn-ghost mt-2 min-h-10" onClick={() => setData(data.filter((_, j) => j !== i))}>Hapus</button>}
+          </li>
+        ))}
+      </ul>
+      {canEdit && <button className="btn btn-ghost mt-3 min-h-10" onClick={() => setData([...data, { id: `d-${Date.now().toString(36)}`, title: "Judul baru", body: "Isi dokumen…", active: true, ...(keywords ? { keywords: "" } : {}) }])}>+ Tambah</button>}
+      <Save canEdit={canEdit} msg={msg} onClick={save} />
+    </Card>
+  );
+}
+
 export default function Settings({ canEdit }: { canEdit: boolean }) {
   const [tab, setTab] = useState("2fa");
   return (
     <div>
       <h1 className="display mb-6 text-3xl">Pengaturan</h1>
-      <Tabs tabs={[["2fa", "Kebijakan 2FA"], ["poli", "Poliklinik"], ["pay", "Jenis bayar"], ["rules", "Aturan janji"], ...(canEdit ? [["icd", "ICD-10"], ["backup", "Cadangan"]] : [])] as [string, string][]} value={tab} onChange={setTab} />
+      <Tabs tabs={[["2fa", "Kebijakan 2FA"], ["poli", "Poliklinik"], ["pay", "Jenis bayar"], ["rules", "Aturan janji"], ["fitur", "Fitur pasien"], ["consent", "Persetujuan"], ["edu", "Edukasi"], ...(canEdit ? [["icd", "ICD-10"], ["backup", "Cadangan"]] : [])] as [string, string][]} value={tab} onChange={setTab} />
       {tab === "2fa" && <TwoFa canEdit={canEdit} />}
       {tab === "poli" && <Poliklinik canEdit={canEdit} />}
       {tab === "pay" && <PayTypes canEdit={canEdit} />}
       {tab === "rules" && <RulesForm canEdit={canEdit} />}
+      {tab === "fitur" && <Features canEdit={canEdit} />}
+      {tab === "consent" && <DocEditor kind="consent" title="Template persetujuan tindakan" canEdit={canEdit} />}
+      {tab === "edu" && <DocEditor kind="edu" title="Materi edukasi pasca tindakan" canEdit={canEdit} keywords />}
       {tab === "icd" && canEdit && <IcdAdmin />}
       {tab === "backup" && canEdit && <Backup />}
     </div>

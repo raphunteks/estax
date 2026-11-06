@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { invoiceFromVisit } from "@/lib/clinic/billing";
 import { queueRx } from "@/lib/clinic/pharmacy";
+import { autoEdu, indexRecall, recallDate } from "@/lib/clinic/care";
+import { pushPatient } from "@/lib/clinic/appointments";
+import { getMaster } from "@/lib/master";
 import { fail, isResponse, json, requirePerm } from "@/lib/api";
 import { audit } from "@/lib/auth/guards";
 import { act, getAppt, isErr } from "@/lib/clinic/appointments";
@@ -28,13 +31,14 @@ export async function GET(req: Request, ctx: Ctx) {
   const owner = role === "dokter" && v.doctorId === a.user.id;
   if (role === "staf") return json({ ok: true, level: "basic", visit: { ...head, anamnesis: v.anamnesis, vitals: v.vitals } });
   const previous = (await (await import("@/lib/clinic/visits")).visitsOfPatient(v.patientId)).filter((x) => x.id !== v.id && x.status === "selesai" && x.createdAt < v.createdAt)[0];
-  return json({ ok: true, level: "full", owner, visit: { ...head, anamnesis: v.anamnesis, vitals: v.vitals, soap: v.soap, diagnoses: v.diagnoses ?? [], plan: v.plan, procedures: v.procedures, rx: v.rx, odo: v.odo }, previousOdo: previous?.odo ?? null, previousDate: previous?.date ?? null, history: owner ? (await odoLog(v.id)).length : 0 });
+  return json({ ok: true, level: "full", owner, visit: { ...head, anamnesis: v.anamnesis, vitals: v.vitals, soap: v.soap, diagnoses: v.diagnoses ?? [], plan: v.plan, procedures: v.procedures, rx: v.rx, odo: v.odo, recall: v.recall ?? null }, previousOdo: previous?.odo ?? null, previousDate: previous?.date ?? null, history: owner ? (await odoLog(v.id)).length : 0 });
 }
 
 const patch = z.object({
   anamnesis: anamnesisSchema.optional(), vitals: vitalsSchema.optional(), soap: soapSchema.optional(), diagnoses: dxSchema.optional(),
   plan: planSchema.optional(), procedures: procSchema.optional(), rx: rxSchema.optional(), odo: odoSchema.optional(),
   finish: z.literal(true).optional(),
+  recall: z.object({ name: z.string().trim().min(2).max(60), days: z.number().int().min(1).max(730), note: z.string().trim().max(200).optional() }).nullable().optional(),
 });
 
 export async function PATCH(req: Request, ctx: Ctx) {
@@ -46,7 +50,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
   if (!v) return fail("not_found", 404);
   const d = p.data;
   const isDoctor = a.user.role === "dokter" && v.doctorId === a.user.id;
-  const basicOnly = !d.soap && !d.diagnoses && !d.plan && !d.procedures && !d.rx && !d.odo && !d.finish;
+  const basicOnly = d.recall === undefined && !d.soap && !d.diagnoses && !d.plan && !d.procedures && !d.rx && !d.odo && !d.finish;
   // Doctors write everything on their own visits; staff only anamnesis/vitals; nobody else writes.
   if (!(isDoctor || (a.user.role === "staf" && basicOnly))) {
     await audit("access.denied", a.user.id, { perm: "exam:write", visit: v.id });
@@ -72,6 +76,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
     v.odo = d.odo;
     await logOdo(v, a.user.id);
   }
+  if (d.recall !== undefined && (isDoctor || a.user.role === "superadmin")) {
+    v.recall = d.recall ? { name: d.recall.name, date: recallDate(v.date, d.recall.days), note: d.recall.note } : undefined;
+    if (d.recall) await indexRecall(v.id);
+  }
   if (d.finish) {
     v.status = "selesai";
     v.finishedAt = Date.now();
@@ -88,6 +96,8 @@ export async function PATCH(req: Request, ctx: Ctx) {
     // Billing + pharmacy hand-off: best-effort, never blocks closing the visit.
     await invoiceFromVisit(v.id).catch(() => null);
     await queueRx(v.id).catch(() => null);
+    await autoEdu(v).catch(() => null);
+    if ((await getMaster("features")).surveyEnabled) await pushPatient(v.patientId, "Bagaimana kunjungan Anda?", "Beri penilaian singkat untuk membantu kami melayani lebih baik.", "/portal/survei").catch(() => null);
     await audit("visit.finished", a.user.id, { visit: v.id, patient: v.patientId });
   }
   await saveVisit(v);

@@ -21,7 +21,8 @@ export default function PortalBills() {
           <p className="mt-3 flex justify-between border-t border-line pt-3 text-sm font-medium"><span>Total {b.discount ? `(diskon ${rp(b.discount)})` : ""}</span><span>{rp(b.total)}</span></p>
           <p className="flex justify-between text-sm text-muted"><span>Dibayar</span><span>{rp(b.paid)}</span></p>
           {b.due > 0 && <p className="flex justify-between text-sm font-medium"><span>Sisa</span><span>{rp(b.due)}</span></p>}
-          {b.due > 0 && <p className="mt-2 text-xs text-muted">Pembayaran dilakukan di kasir klinik.</p>}
+          {b.due > 0 && <p className="mt-2 text-xs text-muted">Pembayaran dilakukan di kasir klinik. Pembayaran online akan tersedia setelah integrasi payment gateway.</p>}
+          {b.paid > 0 && <a href={`/api/invoices/${b.id}/pdf`} className="btn btn-ghost mt-3 inline-flex min-h-10">Unduh kuitansi (PDF)</a>}
         </Card>
       ))}
     </div>

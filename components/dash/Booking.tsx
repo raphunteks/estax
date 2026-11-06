@@ -28,6 +28,7 @@ export function SlotPicker({ doctorId, date, value, onPick, hold, refresh = 0 }:
   if (!doctorId || !date) return null;
   if (!slots) return <div className="h-12 animate-pulse rounded-xl bg-fg/5" aria-label="Memuat jam" />;
   const free = slots.filter((s) => s.state !== "past");
+  const full = free.length > 0 && free.every((s) => s.state !== "free");
   if (!free.length) return <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted">Tidak ada jam praktik pada tanggal ini.</p>;
   return (
     <div>
@@ -38,7 +39,20 @@ export function SlotPicker({ doctorId, date, value, onPick, hold, refresh = 0 }:
           </button>
         ))}
       </div>
+      {full && hold && <Waitlist doctorId={doctorId} date={date} />}
       {msg && <p role="alert" className="mt-2 text-xs text-red-400">{msg}</p>}
+    </div>
+  );
+}
+
+function Waitlist({ doctorId, date }: { doctorId: string; date: string }) {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => void api<{ on: boolean }>(`/api/portal/waitlist?doctorId=${doctorId}&date=${date}`).then((r) => setOn(r.ok ? r.on : false)), [doctorId, date]);
+  const toggle = async () => { const r = await api("/api/portal/waitlist" + (on ? `?doctorId=${doctorId}&date=${date}` : ""), on ? "DELETE" : "POST", on ? undefined : { doctorId, date }); if (r.ok) setOn(!on); };
+  return (
+    <div className="mt-3 rounded-xl border border-dashed border-line p-3 text-sm">
+      <p className="text-muted">Semua jam penuh. {on ? "Anda masuk daftar tunggu. Kami beri tahu bila ada slot kosong." : "Mau diberi tahu bila ada slot kosong?"}</p>
+      <button type="button" disabled={on === null} onClick={() => void toggle()} className="btn btn-ghost mt-2 min-h-10">{on ? "Keluar dari daftar tunggu" : "Masuk daftar tunggu"}</button>
     </div>
   );
 }
@@ -59,6 +73,15 @@ export function BookingForm({ mode, presetPatient, preset, onDone }: { mode: "st
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
+  const [members, setMembers] = useState<{ id: string; name: string; relation: string }[]>([]);
+  const [who, setWho] = useState("");
+  const [promos, setPromos] = useState<{ id: string; name: string; kind: string; value: number }[]>([]);
+  const [promoId, setPromoId] = useState("");
+  useEffect(() => {
+    if (mode !== "pasien") return;
+    void api<{ members: { id: string; name: string; relation: string }[] }>("/api/portal/keluarga").then((r) => r.ok && setMembers(r.members));
+    void api<{ promos: { id: string; name: string; kind: string; value: number }[] }>("/api/portal/promo").then((r) => r.ok && setPromos(r.promos));
+  }, [mode]);
 
   useEffect(() => void api<Opts>("/api/booking/options").then((d) => d.ok && (setO(d as unknown as Opts), setPay((d as unknown as Opts).paytypes[0]?.id ?? ""))), []);
   useEffect(() => {
@@ -82,7 +105,7 @@ export function BookingForm({ mode, presetPatient, preset, onDone }: { mode: "st
     e.preventDefault();
     setBusy(true);
     setMsg("");
-    const d = await api("/api/appointments", "POST", { patientId: patient?.id, doctorId: doctor, date, time, payTypeId: pay, payNumber: payNo || undefined, complaint: complaint || undefined });
+    const d = await api("/api/appointments", "POST", { doctorId: doctor, date, time, payTypeId: pay, payNumber: payNo || undefined, complaint: complaint || undefined, promoId: promoId || undefined, patientId: mode === "pasien" ? who || undefined : patient?.id });
     setBusy(false);
     if (!d.ok) {
       setMsg(d.message ?? "Gagal membuat janji.");
@@ -105,6 +128,7 @@ export function BookingForm({ mode, presetPatient, preset, onDone }: { mode: "st
           {!patient && found.length > 0 && <ul className="mt-1 divide-y divide-line rounded-xl border border-line text-sm">{found.map((p) => <li key={p.id}><button type="button" className="min-h-11 w-full px-4 text-left hover:bg-fg/5" onClick={() => (setPatient(p), setFound([]))}>{p.name}{p.rmNo && <span className="text-muted"> · RM {p.rmNo}</span>}</button></li>)}</ul>}
         </div>
       )}
+      {mode === "pasien" && members.length > 1 && <Field label="Janji untuk"><Select value={who} onChange={(e) => setWho(e.target.value)}><option value="">Saya sendiri</option>{members.filter((m) => m.relation !== "saya").map((m) => <option key={m.id} value={m.id}>{m.name} ({m.relation})</option>)}</Select></Field>}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Poliklinik"><Select value={poli} onChange={(e) => (setPoli(e.target.value), setDoctor(""), setTime(""))}><option value="">Semua</option>{o.poliklinik.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
         <Field label="Dokter"><Select value={doctor} onChange={(e) => (setDoctor(e.target.value), setTime(""))} required><option value="">Pilih dokter</option>{docs.map((d) => <option key={d.id} value={d.id}>{d.name}{d.poliklinikId ? ` · ${o.poliklinik.find((p) => p.id === d.poliklinikId)?.name ?? ""}` : ""}</option>)}</Select></Field>
@@ -115,6 +139,7 @@ export function BookingForm({ mode, presetPatient, preset, onDone }: { mode: "st
       {doctor && date && !dateProblem() && (
         <div><p className="mb-2 text-sm font-medium">Jam</p><SlotPicker doctorId={doctor} date={date} value={time} onPick={setTime} hold={mode === "pasien"} refresh={tick} />{mode === "pasien" && time && <p className="mt-2 text-xs text-muted">Jam ini kami tahan 5 menit untuk Anda.</p>}</div>
       )}
+      {mode === "pasien" && promos.length > 0 && <Field label="Promo (opsional)" hint="Diskon dihitung otomatis di tagihan setelah tindakan."><Select value={promoId} onChange={(e) => setPromoId(e.target.value)}><option value="">Tanpa promo</option>{promos.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.kind === "percent" ? `${p.value}%` : p.kind === "amount" ? `Rp ${p.value.toLocaleString("id-ID")}` : "gratis"})</option>)}</Select></Field>}
       <Field label="Keluhan utama"><Input value={complaint} maxLength={300} onChange={(e) => setComplaint(e.target.value)} placeholder="Mis. sakit gigi geraham kiri" /></Field>
       <p role="alert" className="min-h-5 text-sm text-red-400">{msg}</p>
       <button className="btn btn-primary disabled:opacity-50" disabled={busy || !doctor || !date || !time || (mode === "staf" && !patient) || Boolean(dateProblem())}>{busy ? "Menyimpan…" : mode === "pasien" ? "Ajukan janji" : "Buat janji"}</button>

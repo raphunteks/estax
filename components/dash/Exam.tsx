@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import ExamCare from "./ExamCare";
 import { useCallback, useEffect, useRef, useState } from "react";
 import IcdPicker, { type Dx } from "@/components/dash/IcdPicker";
 import ExamAi from "@/components/dash/ExamAi";
@@ -15,7 +16,7 @@ type V = {
   id: string; status: "berjalan" | "selesai"; date: string; doctorId: string;
   patient: { id: string; name: string; rmNo: string | null; birthDate: string; gender: string; health: Record<string, unknown> } | null;
   anamnesis: Record<string, string | undefined>; vitals: Record<string, string | undefined>;
-  soap?: Record<string, string | undefined>; diagnoses?: Dx[]; plan?: Plan[]; procedures?: Proc[]; rx?: Rx[]; odo?: Odo;
+  soap?: Record<string, string | undefined>; diagnoses?: Dx[]; plan?: Plan[]; procedures?: Proc[]; rx?: Rx[]; odo?: Odo; recall?: { name: string; date: string; note?: string } | null;
 };
 type Res = { level: "basic" | "full"; owner?: boolean; visit: V; previousOdo?: Odo | null; previousDate?: string | null };
 
@@ -253,6 +254,7 @@ export function ExamWorkspace({ id, role }: { id: string; role: "superadmin" | "
           </button>
         </div>
       )}
+      {full && v.patient && <ExamCare visitId={id} patientId={v.patient.id} role={role} recall={v.recall} locked={false} onRecall={(r) => upd({ recall: r })} />}
     </div>
   );
 }

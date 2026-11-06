@@ -12,24 +12,20 @@ import { siteImg } from "@/lib/site-helpers";
 /** Our team: cards rise in with a stagger. Hidden until real members are added in lib/content.ts. */
 /** Empty data renders nothing at all, so no animation targets (or scope) are created for it. */
 export function Team() {
-  const team = useSite().team;
-  if (!team || !team.length) return null;
-  return <TeamInner team={team} />;
+  return useSite().team.length ? <TeamInner /> : null;
 }
-function TeamInner({ team }: { team: ReturnType<typeof useSite>["team"] }) {
+function TeamInner() {
+  const team = useSite().team;
   const root = useRef<HTMLElement>(null);
   useGSAP(
     () => {
-      if (!root.current) return;
-      const grid = root.current.querySelector(".tm-grid");
-      const cards = root.current.querySelectorAll(".tm-card");
-      if (!grid || !cards.length) return;
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(cards, { y: 60, opacity: 0, duration: 1, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: grid, start: "top 82%", once: true } });
+        gsap.from(".tm-card", { y: 60, opacity: 0, duration: 1, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: ".tm-grid", start: "top 82%", once: true } });
       });
     },
-    { scope: root, dependencies: [team.length] },
+    { scope: root },
   );
+  if (!team.length) return null;
   return (
     <section ref={root} id="team" className="py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -97,24 +93,20 @@ function Compare({ before, after, label }: { before: string; after: string; labe
 
 /** Empty data renders nothing at all, so no animation targets (or scope) are created for it. */
 export function Results() {
-  const results = useSite().results.filter((r) => r.before && r.after);
-  if (!results.length) return null;
-  return <ResultsInner results={results} />;
+  return useSite().results.filter((r) => r.before && r.after).length ? <ResultsInner /> : null;
 }
-function ResultsInner({ results }: { results: ReturnType<typeof useSite>["results"] }) {
+function ResultsInner() {
+  const results = useSite().results.filter((r) => r.before && r.after);
   const root = useRef<HTMLElement>(null);
   useGSAP(
     () => {
-      if (!root.current) return;
-      const grid = root.current.querySelector(".rs-grid");
-      const items = root.current.querySelectorAll(".rs-item");
-      if (!grid || !items.length) return;
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(items, { y: 50, opacity: 0, duration: 1, stagger: 0.12, ease: "power3.out", scrollTrigger: { trigger: grid, start: "top 82%", once: true } });
+        gsap.from(".rs-item", { y: 50, opacity: 0, duration: 1, stagger: 0.12, ease: "power3.out", scrollTrigger: { trigger: ".rs-grid", start: "top 82%", once: true } });
       });
     },
-    { scope: root, dependencies: [results.length] },
+    { scope: root },
   );
+  if (!results.length) return null;
   return (
     <section ref={root} id="results" className="bg-surface py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -139,24 +131,20 @@ function ResultsInner({ results }: { results: ReturnType<typeof useSite>["result
 
 /** Empty data renders nothing at all, so no animation targets (or scope) are created for it. */
 export function Testimonials() {
-  const testimonials = useSite().testimonials;
-  if (!testimonials.length) return null;
-  return <TestimonialsInner testimonials={testimonials} />;
+  return useSite().testimonials.length ? <TestimonialsInner /> : null;
 }
-function TestimonialsInner({ testimonials }: { testimonials: ReturnType<typeof useSite>["testimonials"] }) {
+function TestimonialsInner() {
+  const testimonials = useSite().testimonials;
   const root = useRef<HTMLElement>(null);
   useGSAP(
     () => {
-      if (!root.current) return;
-      const grid = root.current.querySelector(".ts-grid");
-      const cards = root.current.querySelectorAll(".ts-card");
-      if (!grid || !cards.length) return;
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(cards, { y: 50, opacity: 0, duration: 1, stagger: 0.12, ease: "power3.out", scrollTrigger: { trigger: grid, start: "top 82%", once: true } });
+        gsap.from(".ts-card", { y: 50, opacity: 0, duration: 1, stagger: 0.12, ease: "power3.out", scrollTrigger: { trigger: ".ts-grid", start: "top 82%", once: true } });
       });
     },
-    { scope: root, dependencies: [testimonials.length] },
+    { scope: root },
   );
+  if (!testimonials.length) return null;
   return (
     <section ref={root} id="testimonials" className="py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">

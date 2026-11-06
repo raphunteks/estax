@@ -4,11 +4,11 @@ import ThemeMenu from "@/components/ThemeMenu";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, CalendarDays, ChevronDown, Cog, Globe, Home, Lock, LogOut, Menu, PanelLeftClose, PanelLeftOpen, ScrollText, ShieldCheck, Sparkles, Stethoscope, User, Users, Wallet, Pill, BarChart3, X, type LucideIcon } from "lucide-react";
+import { Activity, CalendarDays, ChevronDown, Cog, Globe, Home, Lock, LogOut, Menu, PanelLeftClose, PanelLeftOpen, ScrollText, ShieldCheck, Tag, MessageCircle, Star, Sparkles, Stethoscope, User, Users, Wallet, Pill, BarChart3, X, type LucideIcon } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import Logo from "@/components/Logo";
 
-const ICONS: Record<string, LucideIcon> = { home: Home, users: Users, calendar: CalendarDays, tooth: Stethoscope, wallet: Wallet, pill: Pill, chart: BarChart3, spark: Sparkles, shield: ShieldCheck, cog: Cog, log: ScrollText, globe: Globe, user: User };
+const ICONS: Record<string, LucideIcon> = { home: Home, users: Users, calendar: CalendarDays, tooth: Stethoscope, wallet: Wallet, pill: Pill, chart: BarChart3, spark: Sparkles, shield: ShieldCheck, cog: Cog, log: ScrollText, globe: Globe, user: User, tag: Tag, chat: MessageCircle, star: Star };
 export type SideItem = { href: string; label: string; icon: string; soon: boolean; group: string };
 
 const listeners = new Set<() => void>();
@@ -29,25 +29,34 @@ const write = (k: string, v: string) => {
 
 export default function Shell({ items, user, locked, children }: { items: SideItem[]; user: { id: string; name: string; role: string; email: string; photo?: string }; locked: boolean; children: React.ReactNode }) {
   const path = usePathname();
+  const root = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const rail = useSyncExternalStore(sub, () => read("rail") === "1", () => false);
   const openRaw = useSyncExternalStore(sub, () => read("navopen"), () => "");
   const openMap = (() => { try { return JSON.parse(openRaw || "{}") as Record<string, boolean>; } catch { return {}; } })();
 
-  // Auto-close mobile drawer on route change
+  // Mobile drawer: slides on transform only, ease-out 240ms. Under reduced motion it just toggles visibility.
+  const { contextSafe } = useGSAP({ scope: root });
+  const slide = contextSafe((show: boolean) => {
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    const mm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    gsap.to(".dash-aside", { translate: show ? "0% 0" : "-100% 0", duration: mm ? 0 : 0.24, ease: "power3.out", overwrite: true });
+  });
+  useEffect(() => slide(open), [open, slide]);
+  // The drawer sets an inline `translate` on narrow screens; once the viewport grows past lg (resize, devtools, rotate)
+  // that inline value would keep the sidebar off-screen, so clear it and let the CSS take over.
   useEffect(() => {
-    setOpen(false);
-  }, [path]);
-
-  // Lock body scroll on mobile/tablet when drawer is open
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = "";
-      };
-    }
-  }, [open]);
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      if (mq.matches) {
+        gsap.killTweensOf(".dash-aside");
+        gsap.set(".dash-aside", { clearProps: "translate" });
+        setOpen(false);
+      } else slide(open);
+    };
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [open, slide]);
 
   const toggleRail = () => write("rail", rail ? "0" : "1");
   const isActive = (h: string) => (h === "/dashboard" ? path === h : path === h || path.startsWith(h + "/"));
@@ -61,22 +70,11 @@ export default function Shell({ items, user, locked, children }: { items: SideIt
   const initials = user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
   return (
-    <div className="min-h-dvh lg:flex">
-      {open && (
-        <button
-          type="button"
-          aria-label="Tutup menu navigasi"
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm transition-opacity lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+    <div ref={root} className="min-h-dvh lg:flex">
+      {open && <button aria-label="Tutup menu" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
       <aside
         aria-label="Navigasi dashboard"
-        className={`dash-aside fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-line bg-surface transition-transform duration-200 ease-out ${
-          open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
-        } lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 lg:shadow-none lg:transition-[width] ${
-          rail ? "lg:w-[72px]" : "lg:w-64"
-        }`}
+        className={`dash-aside fixed inset-y-0 left-0 z-40 flex w-72 -translate-x-full flex-col border-r border-line bg-surface lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0 lg:transition-[width] lg:duration-200 ${rail ? "lg:w-[72px]" : "lg:w-64"}`}
       >
         <div className={`flex items-center px-3 ${rail ? "flex-col gap-3 py-3" : "h-[72px] justify-between"}`}>
           <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5 text-accent" aria-label="Beranda dashboard">
@@ -155,13 +153,7 @@ export default function Shell({ items, user, locked, children }: { items: SideIt
 
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-line bg-bg/80 px-4 backdrop-blur-xl sm:px-6">
-          <button
-            type="button"
-            className="flex size-10 items-center justify-center rounded-xl border border-line text-muted transition-[color,transform] hover:text-fg active:scale-95 lg:hidden"
-            onClick={() => setOpen(true)}
-            aria-label="Buka menu navigasi"
-            aria-expanded={open}
-          >
+          <button className="rounded-lg p-2 text-muted hover:text-fg lg:hidden" onClick={() => setOpen(true)} aria-label="Buka menu">
             <Menu size={20} />
           </button>
           <p className="ml-auto hidden text-sm text-muted sm:block">{user.email}</p>

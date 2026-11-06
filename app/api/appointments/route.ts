@@ -3,6 +3,7 @@ import { fail, isResponse, json, requireAuth } from "@/lib/api";
 import { audit, rateLimit } from "@/lib/auth/guards";
 import { can } from "@/lib/auth/rbac";
 import { ACTIVE, createAppt, isErr, listAppts, type Status } from "@/lib/clinic/appointments";
+import { ownsPatient } from "@/lib/clinic/family";
 import { getPatient, patientOfUser } from "@/lib/clinic/patients";
 import { present } from "@/lib/clinic/present";
 
@@ -14,6 +15,7 @@ const body = z.object({
   payTypeId: z.string().min(2).max(30),
   payNumber: z.string().max(40).optional(),
   complaint: z.string().max(300).optional(),
+  promoId: z.string().max(20).optional(),
 });
 
 export async function GET(req: Request) {
@@ -45,7 +47,8 @@ export async function POST(req: Request) {
   const p = body.safeParse(await req.json().catch(() => null));
   if (!p.success) return fail("validation");
   if (!(await rateLimit("appt-create", a.user.id, 20, 3600))) return fail("rate_limited", 429);
-  const patient = isPatient ? await patientOfUser(a.user.id) : p.data.patientId ? await getPatient(p.data.patientId) : null;
+  // A portal user books for themselves or for a dependent they manage.
+  const patient = isPatient ? (p.data.patientId && (await ownsPatient(a.user.id, p.data.patientId)) ? await getPatient(p.data.patientId) : p.data.patientId ? null : await patientOfUser(a.user.id)) : p.data.patientId ? await getPatient(p.data.patientId) : null;
   if (!patient) return fail("patient", 400, isPatient ? "Data pasien tidak ditemukan." : "Pilih pasien.");
   const r = await createAppt({ ...p.data, patientId: patient.id }, { id: a.user.id, role: a.user.role });
   if (isErr(r)) return fail(r.error, r.status, r.message);

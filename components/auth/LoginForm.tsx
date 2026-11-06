@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { startAuthentication, browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ReCAPTCHA from "react-google-recaptcha";
 import { AuthShell, btnCls, inputCls, shake } from "./ui";
@@ -27,6 +28,8 @@ export default function LoginForm({ next }: { next?: string }) {
   const card = useRef<HTMLFormElement>(null);
   const cap = useRef<ReCAPTCHA>(null);
   const [unverified, setUnverified] = useState(false);
+  const [pk, setPk] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setPk(browserSupportsWebAuthn()), 0); return () => clearTimeout(t); }, []);
   const [sentMsg, setSentMsg] = useState("");
 
   const go = (path: string) => {
@@ -62,6 +65,19 @@ export default function LoginForm({ next }: { next?: string }) {
       setStep("totp");
       setPassword("");
     } else go(d.next);
+  }
+
+  async function passkey() {
+    if (busy) return;
+    setBusy(true); setErr("");
+    try {
+      const o = await fetch("/api/passkey/login/options", { method: "POST" }).then((x) => x.json());
+      if (!o.ok) throw new Error(o.message);
+      const response = await startAuthentication({ optionsJSON: o.options });
+      const d = await fetch("/api/passkey/login/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: o.token, response }) }).then((x) => x.json());
+      if (!d.ok) { setErr(d.message ?? "Passkey ditolak."); setBusy(false); return; }
+      go(d.next);
+    } catch { setErr("Passkey dibatalkan atau tidak tersedia."); setBusy(false); }
   }
 
   async function submitCode(value: string) {
@@ -149,6 +165,9 @@ export default function LoginForm({ next }: { next?: string }) {
         <button className={`${btnCls} au-in mt-3`} disabled={busy || !email || !password}>
           {busy ? "Memeriksa…" : "Masuk"}
         </button>
+        {pk && (
+          <button type="button" onClick={() => void passkey()} disabled={busy} className="au-in mt-3 min-h-11 w-full rounded-xl border border-line text-sm transition-transform active:scale-[0.98]">Masuk dengan sidik jari / Face ID</button>
+        )}
         <div className="au-in mt-5 flex items-center justify-between text-sm text-muted">
           <Link href="/lupa-sandi" className="underline-offset-4 hover:text-fg hover:underline">
             Lupa kata sandi?

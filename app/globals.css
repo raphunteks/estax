@@ -55,10 +55,8 @@
   --font-sans: var(--font-manrope), system-ui, sans-serif;
 }
 
-html[data-scroll-behavior="smooth"] {
-  scroll-behavior: smooth;
-}
 html {
+  scroll-behavior: smooth;
   scroll-padding-top: 84px;
 }
 body {

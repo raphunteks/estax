@@ -25,60 +25,14 @@ export async function chat(messages: { role: "system" | "user" | "assistant"; co
   let res: Response;
   try {
     res = await fetch(`${base}/chat/completions`, {
-      method: "POST",
-      headers: headers(),
-      signal: AbortSignal.timeout(60_000),
-      body: JSON.stringify({
-        model: process.env.NINEROUTER_MODEL ?? "estaka-combos",
-        messages,
-        max_tokens: o.max ?? 900,
-        temperature: o.temperature ?? 0.2,
-        stream: false,
-      }),
+      method: "POST", headers: headers(), signal: AbortSignal.timeout(60_000),
+      body: JSON.stringify({ model: process.env.NINEROUTER_MODEL ?? "estaka-combos", messages, max_tokens: o.max ?? 900, temperature: o.temperature ?? 0.2 }),
     });
-  } catch {
-    throw new AiError("ai_unreachable");
-  }
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    console.error(`[ai] chat -> ${res.status} ${errText.slice(0, 300)}`);
-    throw new AiError(`ai_${res.status}`);
-  }
-
-  const raw = await res.text().catch(() => "");
-
-  // Handle SSE streaming response if router returns stream
-  if (raw.trim().startsWith("data:")) {
-    let combinedContent = "";
-    let combinedReasoning = "";
-    const lines = raw.split(/\r?\n/);
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed === "data: [DONE]") continue;
-      if (trimmed.startsWith("data:")) {
-        try {
-          const chunk = JSON.parse(trimmed.slice(5).trim());
-          const delta = chunk.choices?.[0]?.delta;
-          if (delta?.content) combinedContent += delta.content;
-          if (delta?.reasoning_content) combinedReasoning += delta.reasoning_content;
-        } catch {}
-      }
-    }
-    const result = (combinedContent || combinedReasoning).trim();
-    if (result) return result;
-  }
-
-  // Handle standard JSON response
-  try {
-    const data = JSON.parse(raw) as {
-      choices?: { message?: { content?: string; reasoning_content?: string } }[];
-    };
-    const m = data.choices?.[0]?.message;
-    return (m?.content || m?.reasoning_content || "").trim();
-  } catch {
-    console.error(`[ai] chat unreadable raw response: ${raw.slice(0, 300)}`);
-    throw new AiError("ai_bad_output");
-  }
+  } catch { throw new AiError("ai_unreachable"); }
+  if (!res.ok) { console.error(`[ai] chat -> ${res.status} ${(await res.text().catch(() => "")).slice(0, 300)}`); throw new AiError(`ai_${res.status}`); }
+  const data = (await res.json().catch(() => ({}))) as { choices?: { message?: { content?: string; reasoning_content?: string } }[] };
+  const m = data.choices?.[0]?.message;
+  return (m?.content || m?.reasoning_content || "").trim();
 }
 
 let sttCache: { ids: string[]; at: number } | null = null;
@@ -90,13 +44,7 @@ export async function sttModels(): Promise<string[]> {
   try {
     const r = await fetch(`${base}/models/stt`, { headers: headers(false), signal: AbortSignal.timeout(10_000) });
     const d = (await r.json()) as { data?: { id?: string }[]; models?: { id?: string }[] };
-    const all = (d.data ?? d.models ?? []).map((m) => m.id).filter((x): x is string => Boolean(x));
-    const sorted = all.sort((a, b) => {
-      const aScore = /whisper|transcribe/i.test(a) ? 1 : 0;
-      const bScore = /whisper|transcribe/i.test(b) ? 1 : 0;
-      return bScore - aScore;
-    });
-    const ids = sorted.slice(0, 4);
+    const ids = (d.data ?? d.models ?? []).map((m) => m.id).filter((x): x is string => Boolean(x)).slice(0, 4);
     if (ids.length) return (sttCache = { ids, at: Date.now() }).ids;
   } catch { /* fall through */ }
   throw new AiError("stt_model_unknown");

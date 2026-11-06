@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { db } from "@/lib/db/store";
 import { randomId } from "@/lib/auth/crypto";
+import { getAppt } from "./appointments";
+import { discountFor, getPromo } from "./promos";
 import { getVisit } from "./visits";
 import { withLock, isBusy } from "./lock";
 
@@ -24,7 +26,7 @@ export const patchSchema = z.object({
 export type Payment = { id: string; amount: number; method: (typeof METHODS)[number]; at: number; by: string; note?: string };
 export type Invoice = {
   id: string; no: string; visitId: string; patientId: string; doctorId: string; date: string;
-  items: z.infer<typeof itemsSchema>; discount: number; payments: Payment[];
+  items: z.infer<typeof itemsSchema>; discount: number; promoId?: string; promoName?: string; payments: Payment[];
   status: "belum" | "sebagian" | "lunas" | "batal";
   voidReq?: { by: string; reason: string; at: number }; voidInfo?: { by: string; reason: string; at: number };
   createdAt: number; updatedAt: number;
@@ -55,8 +57,15 @@ export async function invoiceFromVisit(visitId: string): Promise<Invoice | null>
     const t = tariffs.find((x) => x.name.toLowerCase() === n || (x.code && x.code.toLowerCase() === n));
     return { id: randomId().slice(0, 10), name: p.tooth ? `${p.name} (gigi ${p.tooth})` : p.name, qty: 1, price: t?.price ?? 0 };
   });
+  let discount = 0, promoId: string | undefined, promoName: string | undefined;
+  const ap = await getAppt(v.apptId);
+  const pr = ap?.promoId ? await getPromo(ap.promoId) : null;
+  if (pr) {
+    discount = Math.min(discountFor(pr, items, new Map(tariffs.map((t) => [t.id, t.name]))), items.reduce((s, i) => s + i.qty * i.price, 0));
+    promoId = pr.id; promoName = pr.name;
+  }
   const seq = await db().incr(`inv:seq:${v.date.slice(2, 4)}${v.date.slice(5, 7)}`);
-  const inv: Invoice = { id, no: `INV-${v.date.slice(2, 4)}${v.date.slice(5, 7)}-${String(seq).padStart(4, "0")}`, visitId, patientId: v.patientId, doctorId: v.doctorId, date: v.date, items, discount: 0, payments: [], status: "belum", createdAt: Date.now(), updatedAt: Date.now() };
+  const inv: Invoice = { id, no: `INV-${v.date.slice(2, 4)}${v.date.slice(5, 7)}-${String(seq).padStart(4, "0")}`, visitId, patientId: v.patientId, doctorId: v.doctorId, date: v.date, items, discount, promoId, promoName, payments: [], status: "belum", createdAt: Date.now(), updatedAt: Date.now() };
   await save(inv);
   await db().sadd("inv:idx", id);
   await db().sadd(`inv:p:${v.patientId}`, id);

@@ -5,13 +5,15 @@ import { db } from "@/lib/db/store";
 import { getMaster, getSchedule } from "@/lib/master";
 import { sendMail } from "@/lib/mail";
 import { notifyRole, notifyUser } from "@/lib/push";
+import { wakeWaitlist } from "./engage";
 import { getPatient } from "./patients";
+import { blocker, claim, getPromo } from "./promos";
 import { addDays, epoch, hhmm, mins, todayWita, weekday } from "./time";
 
 export type Status = "menunggu" | "dikonfirmasi" | "checkin" | "dipanggil" | "dikursi" | "selesai" | "batal_pasien" | "batal_klinik" | "tidak_hadir";
 export type Appt = {
   id: string; patientId: string; doctorId: string; poliklinikId?: string; date: string; time: string; endTime: string;
-  payTypeId: string; payNumber?: string; complaint?: string; status: Status; source: "portal" | "staf" | "web";
+  payTypeId: string; payNumber?: string; complaint?: string; promoId?: string; pre?: { complaint: string; allergies?: string; medications?: string; conditions?: string; at: number }; status: Status; source: "portal" | "staf" | "web";
   queueNo?: number; createdAt: number; createdBy: string; checkInAt?: number; calledAt?: number; recallAt?: number; seatedAt?: number; doneAt?: number;
   log: { t: number; by: string; action: string; note?: string }[];
 };
@@ -62,7 +64,7 @@ export async function pushPatient(patientId: string, title: string, body: string
 }
 const when = (a: Pick<Appt, "date" | "time">) => `${a.date} pukul ${a.time} WITA`;
 
-export type CreateInput = { patientId: string; doctorId: string; date: string; time: string; payTypeId: string; payNumber?: string; complaint?: string };
+export type CreateInput = { patientId: string; doctorId: string; date: string; time: string; payTypeId: string; payNumber?: string; complaint?: string; promoId?: string };
 export type Err = { error: string; message: string; status: number };
 const err = (error: string, message: string, status = 400): Err => ({ error, message, status });
 
@@ -90,12 +92,20 @@ export async function createAppt(i: CreateInput, by: { id: string; role: string 
   const mine = await listAppts({ patientId: i.patientId });
   if ((by.role === "pasien" || by.role === "publik") && mine.filter((a) => ACTIVE.includes(a.status) && a.date >= todayWita()).length >= rules.maxActiveBookings) return err("limit", `Maksimal ${rules.maxActiveBookings} janji aktif.`, 409);
   const sch = (await getSchedule(i.doctorId))!;
+  let promoId: string | undefined;
+  if (i.promoId) {
+    const pr = await getPromo(i.promoId);
+    const why = !pr ? "Promo tidak ditemukan." : await blocker(pr, i.patientId, mine.some((a) => a.status === "selesai"), i.doctorId, sch.poliklinikId);
+    if (why) return err("promo", why);
+    promoId = pr!.id;
+  }
   const id = randomId();
   if (!(await db().set(slotKey(i.doctorId, i.date, i.time), id, { nx: true }))) return err("slot_taken", "Slot sudah terisi.", 409); // atomic: two requests cannot both win
   await db().del(holdKey(i.doctorId, i.date, i.time));
-  const a: Appt = { id, patientId: i.patientId, doctorId: i.doctorId, poliklinikId: sch.poliklinikId, date: i.date, time: i.time, endTime: hhmm(mins(i.time) + sch.slotMinutes), payTypeId: i.payTypeId, payNumber: i.payNumber?.trim(), complaint: i.complaint?.trim().slice(0, 300), status: by.role === "pasien" || by.role === "publik" ? "menunggu" : "dikonfirmasi", source: by.role === "publik" ? "web" : by.role === "pasien" ? "portal" : "staf", createdAt: Date.now(), createdBy: by.id, log: [{ t: Date.now(), by: by.id, action: "created" }] };
+  const a: Appt = { id, promoId, patientId: i.patientId, doctorId: i.doctorId, poliklinikId: sch.poliklinikId, date: i.date, time: i.time, endTime: hhmm(mins(i.time) + sch.slotMinutes), payTypeId: i.payTypeId, payNumber: i.payNumber?.trim(), complaint: i.complaint?.trim().slice(0, 300), status: by.role === "pasien" || by.role === "publik" ? "menunggu" : "dikonfirmasi", source: by.role === "publik" ? "web" : by.role === "pasien" ? "portal" : "staf", createdAt: Date.now(), createdBy: by.id, log: [{ t: Date.now(), by: by.id, action: "created" }] };
   await save(a);
   await indexAppt(a);
+  if (promoId) await claim((await getPromo(promoId))!, i.patientId);
   if (a.status === "menunggu") await notifyRole("staf", { title: "Permintaan janji baru", body: `${a.date} pukul ${a.time} WITA`, url: "/dashboard/janji" });
   if (a.status === "dikonfirmasi") await notify(a.patientId, "Janji Estaka Dental Clinic dikonfirmasi", `Janji Anda pada ${when(a)} telah dikonfirmasi.`);
   return a;
@@ -120,13 +130,17 @@ export async function listAppts(f: { date?: string; from?: string; to?: string; 
   return rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 }
 
-const release = (a: Appt) => db().del(slotKey(a.doctorId, a.date, a.time));
+const release = async (a: Appt) => {
+  await db().del(slotKey(a.doctorId, a.date, a.time));
+  await wakeWaitlist(a.doctorId, a.date, a.time).catch(() => null);
+};
 const step = (a: Appt, by: string, action: string, note?: string) => a.log.push({ t: Date.now(), by, action, note });
 
-export type Action = "confirm" | "reject" | "cancel" | "reschedule" | "checkin" | "call" | "recall" | "seat" | "done" | "noshow";
+export type Action = "confirm" | "reject" | "cancel" | "reschedule" | "checkin" | "arrive" | "call" | "recall" | "seat" | "done" | "noshow";
 const FLOW: Record<string, { from: Status[]; to: Status }> = {
   confirm: { from: ["menunggu"], to: "dikonfirmasi" },
   checkin: { from: ["dikonfirmasi", "menunggu"], to: "checkin" },
+  arrive: { from: ["dikonfirmasi"], to: "checkin" },
   call: { from: ["checkin"], to: "dipanggil" },
   recall: { from: ["dipanggil"], to: "dipanggil" },
   seat: { from: ["dipanggil", "checkin"], to: "dikursi" },
@@ -138,9 +152,14 @@ export async function act(a: Appt, action: Action, by: { id: string; role: strin
   const staff = by.role === "superadmin" || by.role === "staf";
   const rules = await getMaster("rules");
   if (by.role === "pasien") {
-    if (action !== "cancel" && action !== "reschedule") return err("forbidden", "Tidak diizinkan.", 403);
-    if (!ACTIVE.slice(0, 2).includes(a.status)) return err("state", "Janji tidak dapat diubah lagi.", 409);
-    if (epoch(a.date, a.time) - Date.now() < rules.cancelHoursBefore * 3600e3) return err("too_late", `Perubahan hanya sampai ${rules.cancelHoursBefore} jam sebelum janji. Hubungi klinik via WhatsApp.`, 409);
+    if (action === "arrive") {
+      if (a.status !== "dikonfirmasi") return err("state", "Janji belum dikonfirmasi klinik atau sudah check-in.", 409);
+      if (a.date !== todayWita()) return err("date", "Check-in hanya pada hari janji.", 409);
+      const win = (await getMaster("features")).checkinWindowMin;
+      if (epoch(a.date, a.time) - Date.now() > win * 60000) return err("early", `Check-in dibuka ${win} menit sebelum jadwal.`, 409);
+    } else if (action !== "cancel" && action !== "reschedule") return err("forbidden", "Tidak diizinkan.", 403);
+    if (action !== "arrive" && !ACTIVE.slice(0, 2).includes(a.status)) return err("state", "Janji tidak dapat diubah lagi.", 409);
+    if (action !== "arrive" && epoch(a.date, a.time) - Date.now() < rules.cancelHoursBefore * 3600e3) return err("too_late", `Perubahan hanya sampai ${rules.cancelHoursBefore} jam sebelum janji. Hubungi klinik via WhatsApp.`, 409);
   } else if (by.role === "dokter") {
     if (a.doctorId !== by.id || !["call", "recall", "seat", "done"].includes(action)) return err("forbidden", "Tidak diizinkan.", 403);
   } else if (!staff) return err("forbidden", "Tidak diizinkan.", 403);
@@ -174,10 +193,10 @@ export async function act(a: Appt, action: Action, by: { id: string; role: strin
   }
   const f = FLOW[action];
   if (!f || !f.from.includes(a.status)) return err("state", "Status tidak memungkinkan.", 409);
-  if (action === "checkin" && a.date !== todayWita()) return err("date", "Check-in hanya pada hari janji.", 409);
+  if ((action === "checkin" || action === "arrive") && a.date !== todayWita()) return err("date", "Check-in hanya pada hari janji.", 409);
   a.status = f.to;
   const now = Date.now();
-  if (action === "checkin") {
+  if (action === "checkin" || action === "arrive") {
     a.checkInAt = now;
     a.queueNo = await db().incr(`q:${a.date}:${a.doctorId}`);
   }
@@ -189,10 +208,21 @@ export async function act(a: Appt, action: Action, by: { id: string; role: strin
   if (action === "noshow") await release(a);
   step(a, by.id, action, p.note);
   await save(a);
+  if (["call", "seat", "done", "noshow"].includes(action)) await queueNudges(a.doctorId, a.date).catch(() => null);
+  if (action === "arrive") await notifyRole("staf", { title: "Pasien sudah tiba", body: `Antrean ${a.queueNo}, ${a.time} WITA`, url: "/dashboard/janji" });
   if (action === "confirm") await notify(a.patientId, "Janji dikonfirmasi", `Janji Anda pada ${when(a)} telah dikonfirmasi.`);
   return a;
 }
 
+/** Tells waiting patients when only a few people are ahead of them. Each threshold is sent once per appointment. */
+export async function queueNudges(doctorId: string, date: string) {
+  const wait = (await listAppts({ date, doctorId, status: ["checkin"] })).filter((a) => a.queueNo).sort((a, b) => a.queueNo! - b.queueNo!);
+  for (const [ahead, a] of wait.entries()) {
+    if (ahead > 2) break;
+    if (!(await db().set(`qn:${a.id}:${ahead}`, 1, { nx: true, ex: 86400 }))) continue;
+    await pushPatient(a.patientId, ahead === 0 ? "Anda berikutnya" : `${ahead} pasien lagi`, ahead === 0 ? "Mohon bersiap, sebentar lagi giliran Anda." : `Masih ada ${ahead} pasien sebelum Anda.`, "/portal");
+  }
+}
 export const isErr = (x: unknown): x is Err => typeof x === "object" && x !== null && "error" in x && "status" in x;
 
 /** Calendar day for one doctor: every slot with its appointment (if any). */

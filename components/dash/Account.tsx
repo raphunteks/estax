@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PwaCard from "./PwaCard";
+import Passkey from "./Passkey";
 import { inputCls } from "@/components/auth/ui";
 
 type Sess = { current: boolean; ua: string; ip: string; last: number; created: number };
@@ -240,6 +241,7 @@ export default function Account(p: Props) {
     <div className="space-y-5">
       <Profile {...p} />
       <PwaCard />
+      <Passkey />
       <Password mustChange={p.mustChange} />
       <TwoFa enabled={p.totpEnabled} mandatory={p.twoFaMandatory} />
       <Sessions />

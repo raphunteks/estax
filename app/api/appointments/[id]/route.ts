@@ -2,11 +2,11 @@ import { z } from "zod";
 import { fail, isResponse, json, requireAuth } from "@/lib/api";
 import { audit, rateLimit } from "@/lib/auth/guards";
 import { act, getAppt, isErr } from "@/lib/clinic/appointments";
-import { getPatient } from "@/lib/clinic/patients";
+import { ownsPatient } from "@/lib/clinic/family";
 import { present } from "@/lib/clinic/present";
 
 const body = z.object({
-  action: z.enum(["confirm", "reject", "cancel", "reschedule", "checkin", "call", "recall", "seat", "done", "noshow"]),
+  action: z.enum(["confirm", "reject", "cancel", "reschedule", "checkin", "arrive", "call", "recall", "seat", "done", "noshow"]),
   note: z.string().max(200).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -20,7 +20,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!p.success) return fail("validation");
   const appt = await getAppt((await ctx.params).id);
   // Same answer for "missing" and "not yours", so ids cannot be probed.
-  const owner = appt && a.user.role === "pasien" ? (await getPatient(appt.patientId))?.userId === a.user.id : true;
+  const owner = appt && a.user.role === "pasien" ? await ownsPatient(a.user.id, appt.patientId) : true;
   if (!appt || !owner || a.user.role === "apoteker") {
     if (appt) await audit("access.denied", a.user.id, { perm: "appointments:update", appt: appt.id });
     return fail("forbidden", 403);

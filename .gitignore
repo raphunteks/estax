@@ -2,11 +2,9 @@ node_modules
 .next
 out
 .env
-.env*.local
-.env.production
-.env.development
-.env.test
+.env*
 !.env.example
+*.bak
 *.tsbuildinfo
 next-env.d.ts
 .dev-db.json

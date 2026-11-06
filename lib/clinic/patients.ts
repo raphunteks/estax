@@ -23,6 +23,9 @@ export type Patient = {
   duplicateOf?: string | null;
   createdAt: number;
   createdBy?: string;
+  /** Dependent (child/relative) managed from a guardian's portal account. */
+  guardianUserId?: string;
+  relation?: string;
 };
 type Input = Record<string, unknown> & { idType: "wni" | "wna"; idNumber: string; name: string; phone: string; gender: "L" | "P"; birthDate: string; birthPlace: string };
 

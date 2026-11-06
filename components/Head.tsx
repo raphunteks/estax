@@ -11,28 +11,15 @@ export function Head({ eyebrow, title, sub }: { eyebrow: Bi; title: Bi; sub?: Bi
 
   useGSAP(
     () => {
-      if (!root.current) return;
       const mm = gsap.matchMedia();
       mm.add(MOTION_OK, () => {
-        if (!root.current) return;
-        const eyebrowEl = root.current.querySelector<HTMLElement>(".hd-eyebrow");
-        const titleTargets = Array.from(root.current.querySelectorAll<HTMLElement>(".hd-title [data-l]"));
-        const subEl = root.current.querySelector<HTMLElement>(".hd-sub");
-
+        const split = SplitText.create(".hd-title [data-l]", { aria: "none", type: "words", mask: "words" });
         gsap.set(root.current, { opacity: 1 });
         const tl = gsap.timeline({ defaults: { ease: "power3.out" }, scrollTrigger: { trigger: root.current, start: "top 86%", once: true } });
-        if (eyebrowEl) tl.from(eyebrowEl, { y: 18, opacity: 0, duration: 0.8 }, 0);
-
-        let split: InstanceType<typeof SplitText> | null = null;
-        if (titleTargets.length) {
-          const s = SplitText.create(titleTargets, { aria: "none", type: "words", mask: "words" });
-          split = s;
-          if (s.words && s.words.length) {
-            tl.from(s.words, { yPercent: 110, duration: 1.1, stagger: 0.05 }, 0.1);
-          }
-        }
-        if (subEl) tl.from(subEl, { y: 18, opacity: 0, duration: 0.9 }, 0.5);
-        return () => split?.revert();
+        tl.from(".hd-eyebrow", { y: 18, opacity: 0, duration: 0.8 }, 0);
+        if (split.words.length) tl.from(split.words, { yPercent: 110, duration: 1.1, stagger: 0.05 }, 0.1);
+        if (root.current?.querySelector(".hd-sub")) tl.from(".hd-sub", { y: 18, opacity: 0, duration: 0.9 }, 0.5);
+        return () => split.revert();
       });
     },
     { scope: root },

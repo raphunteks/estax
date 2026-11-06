@@ -19,6 +19,8 @@ export type Visit = {
   anamnesis: z.infer<typeof anamnesisSchema>; vitals: z.infer<typeof vitalsSchema>; soap: z.infer<typeof soapSchema>;
   diagnoses?: z.infer<typeof dxSchema>; plan: z.infer<typeof planSchema>; procedures: z.infer<typeof procSchema>; rx: z.infer<typeof rxSchema>;
   odo: Odo; createdAt: number; updatedAt: number; finishedAt?: number;
+  /** Follow-up the doctor asked for; the patient and staff are reminded before `date`. */
+  recall?: { name: string; date: string; note?: string; remindedAt?: number };
 };
 
 const vkey = (id: string) => `visit:${id}`;
@@ -37,7 +39,7 @@ export async function startVisit(a: Appt): Promise<Visit> {
   const prev = (await visitsOfPatient(a.patientId)).filter((x) => x.status === "selesai").sort((x, y) => y.createdAt - x.createdAt)[0];
   const v: Visit = {
     id: newId(), patientId: a.patientId, apptId: a.id, doctorId: a.doctorId, date: a.date, status: "berjalan",
-    anamnesis: { complaint: a.complaint ?? "" }, vitals: {}, soap: {}, plan: [], procedures: [], rx: [],
+    anamnesis: { complaint: a.complaint ?? "", ...(a.pre ? { complaint: a.pre.complaint || a.complaint || "", allergies: a.pre.allergies, medications: a.pre.medications, conditions: a.pre.conditions } : {}) }, vitals: {}, soap: {}, plan: [], procedures: [], rx: [],
     odo: prev ? structuredClone(prev.odo) : emptyOdo(), createdAt: Date.now(), updatedAt: Date.now(),
   };
   if (!(await db().set(`visit:appt:${a.id}`, v.id, { nx: true }))) return (await getVisit((await visitOfAppt(a.id))!))!;
