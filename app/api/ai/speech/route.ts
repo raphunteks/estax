@@ -31,3 +31,4 @@ export async function POST(req: Request) {
     return fail(code, 502, "Gagal memproses suara.");
   }
 }
+

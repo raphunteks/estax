@@ -64,6 +64,9 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const synthVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const isAudioUnlockedRef = useRef(false);
+  const isSubmittingRef = useRef(false);
+  const lastSubmittedTextRef = useRef("");
+  const lastSubmitTimeRef = useRef(0);
 
   // Synchronize mutable refs
   useEffect(() => {
@@ -258,15 +261,43 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       const q = text.trim();
       if (!q || !isCallActiveRef.current) return;
 
+      // Deduplication Guard: prevent double trigger / concurrent submissions
+      const now = Date.now();
+      if (isSubmittingRef.current) return;
+      if (
+        lastSubmittedTextRef.current &&
+        q.toLowerCase() === lastSubmittedTextRef.current.toLowerCase() &&
+        now - lastSubmitTimeRef.current < 3500
+      ) {
+        return;
+      }
+
+      isSubmittingRef.current = true;
+      lastSubmittedTextRef.current = q;
+      lastSubmitTimeRef.current = now;
+
+      // Clear any pending silence timer & reset transcript
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
+      }
+      setLiveTranscript("");
+
+      // Temporarily abort recognition so browser doesn't buffer/duplicate speech during processing
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+      }
+
       stopAudio();
       setState("thinking");
-      setLiveTranscript("");
       setErrorNotice(null);
 
       const time = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
       const currentHistory = [...history];
 
-      // Optimistically add user turn
+      // Add user turn once
       setHistory((prev) => [...prev, { role: "user", content: q, time }]);
 
       // Send to 9Router Voice AI tool
@@ -276,11 +307,15 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
         history: payloadHistory,
       });
 
-      if (!isCallActiveRef.current) return;
+      if (!isCallActiveRef.current) {
+        isSubmittingRef.current = false;
+        return;
+      }
 
       if (!res.ok || !res.text) {
         setErrorNotice(res.message || "Gagal mendapatkan balasan dari AI. Silakan coba lagi.");
         setState("listening");
+        isSubmittingRef.current = false;
         resumeListening();
         return;
       }
@@ -291,6 +326,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
       setState("speaking");
       playSpeech(answer, () => {
+        isSubmittingRef.current = false;
         if (isCallActiveRef.current) {
           setState("listening");
           resumeListening();
@@ -323,6 +359,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
     rec.onresult = (event: any) => {
       if (!isCallActiveRef.current || isMutedRef.current) return;
+      if (isSubmittingRef.current || state === "thinking") return;
 
       // If user starts speaking while AI is speaking, interrupt immediately!
       if (isCallActiveRef.current && state === "speaking") {
@@ -332,28 +369,34 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
       let interim = "";
       let final = "";
+      let hasFinal = false;
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const item = event.results[i];
         if (item.isFinal) {
           final += item[0].transcript;
+          hasFinal = true;
         } else {
           interim += item[0].transcript;
         }
       }
 
-      const currentSpeech = final || interim;
+      const currentSpeech = (final || interim).trim();
+      if (!currentSpeech) return;
+
       setLiveTranscript(currentSpeech);
 
-      // Debounce silence detection: once user stops talking for 1300ms, send to AI
+      // Smart End-of-Speech Detection:
+      // If user finished a sentence (isFinal): wait 850ms silence.
+      // If still forming words (interim): wait 1400ms so user isn't cut off mid-thought.
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
-      if (currentSpeech.trim().length > 1) {
-        silenceTimeoutRef.current = setTimeout(() => {
-          if (isCallActiveRef.current && currentSpeech.trim().length > 1) {
-            submitQuestion(currentSpeech.trim());
-          }
-        }, 1300);
-      }
+      const delay = hasFinal ? 850 : 1400;
+
+      silenceTimeoutRef.current = setTimeout(() => {
+        if (isCallActiveRef.current && !isSubmittingRef.current && currentSpeech.length > 1) {
+          submitQuestion(currentSpeech);
+        }
+      }, delay);
     };
 
     rec.onerror = (e: any) => {
@@ -487,6 +530,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   // End Call Handler
   const endCall = useCallback(() => {
     isCallActiveRef.current = false;
+    isSubmittingRef.current = false;
     stopAudio();
 
     if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
@@ -527,6 +571,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   // Interrupt AI
   const handleInterrupt = () => {
     stopAudio();
+    isSubmittingRef.current = false;
     setState("listening");
     resumeListening();
   };
@@ -547,6 +592,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   // Clear conversation history
   const handleClearHistory = () => {
     setHistory([]);
+    lastSubmittedTextRef.current = "";
     try {
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {}
@@ -730,7 +776,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
                 Mendengarkan ucapan Anda…
               </div>
               <p className="mt-2 min-h-12 text-sm italic text-fg/90">
-                {liveTranscript || "Silakan berbicara sekarang, AI akan langsung membalas dengan suara setelah jeda sejenak."}
+                {liveTranscript || "Silakan berbicara sekarang, AI otomatis menjawab setelah Anda selesai berucap."}
               </p>
             </>
           ) : state === "thinking" ? (
