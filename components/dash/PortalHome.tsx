@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import LiveClock from "./LiveClock";
 import { Badge, Empty, Skeleton, StatusBadge, api, fmtDate } from "./kit";
-import { Bell, CalendarCheck, ChevronRight, ClipboardSignature, FileImage, Gift, MessageCircle, Pill, Receipt, Sparkles, Star, Stethoscope, Users, BookOpen, type LucideIcon } from "lucide-react";
+import { Bell, CalendarCheck, ChevronRight, ClipboardSignature, FileImage, Gift, MessageCircle, Phone, Pill, Receipt, Sparkles, Star, Stethoscope, Users, BookOpen, type LucideIcon } from "lucide-react";
 
 type Home = {
   patient: { name: string; rmNo: string | null; status: string } | null;
@@ -91,11 +91,18 @@ export default function PortalHome({ name, userId, photo }: { name: string; user
               <p role="status" className="mt-2 min-h-5 text-sm text-muted">{arrMsg}</p>
             </section>
           )}
-          <Link href="/portal/tanya" aria-label="Tanya Asisten Estaka" style={tint("violet")} className="flex items-center gap-3 rounded-2xl border p-4 transition-transform active:scale-[0.98]">
-            <span className="grid size-11 shrink-0 place-items-center rounded-full" style={{ background: "color-mix(in oklab, var(--t) 22%, transparent)" }}><Sparkles size={22} aria-hidden="true" style={{ color: "var(--t)" }} /></span>
-            <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Tanya Asisten Estaka</span><span className="block text-xs text-muted">Jam praktik, layanan, dan biaya. Dijawab AI, kapan saja.</span></span>
-            <ChevronRight size={18} className="shrink-0 text-muted" aria-hidden="true" />
-          </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Link href="/portal/tanya" aria-label="Tanya Asisten Estaka" style={tint("violet")} className="flex items-center gap-3 rounded-2xl border p-4 transition-transform active:scale-[0.98]">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full" style={{ background: "color-mix(in oklab, var(--t) 22%, transparent)" }}><Sparkles size={22} aria-hidden="true" style={{ color: "var(--t)" }} /></span>
+              <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Tanya Teks AI</span><span className="block text-xs text-muted">Layanan, jadwal, biaya</span></span>
+              <ChevronRight size={18} className="shrink-0 text-muted" aria-hidden="true" />
+            </Link>
+            <Link href="/portal/bicara" aria-label="Telepon Suara AI" style={tint("teal")} className="flex items-center gap-3 rounded-2xl border p-4 transition-transform active:scale-[0.98]">
+              <span className="grid size-11 shrink-0 place-items-center rounded-full" style={{ background: "color-mix(in oklab, var(--t) 22%, transparent)" }}><Phone size={22} aria-hidden="true" style={{ color: "var(--t)" }} /></span>
+              <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">Telepon Suara AI</span><span className="block text-xs text-muted">Bicara langsung dua arah</span></span>
+              <ChevronRight size={18} className="shrink-0 text-muted" aria-hidden="true" />
+            </Link>
+          </div>
           <section aria-label="Layanan">
             <h2 className="mb-2 font-medium">Layanan cepat</h2>
             <div className="grid grid-cols-3 gap-2">

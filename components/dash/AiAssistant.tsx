@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useDictate } from "./useDictate";
 import { Badge, Card, Empty, Field, Input, Select, Skeleton, Tabs, api } from "./kit";
 
-type Tool = "soap" | "tidy" | "summary" | "wa" | "report" | "faq";
+type Tool = "soap" | "tidy" | "summary" | "wa" | "report" | "faq" | "voice";
 type Soap = { s?: string; o?: string; a?: string; p?: string };
 const area = "w-full rounded-xl border border-line bg-transparent p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent";
 const NOTE = "Draf AI. Periksa dan koreksi sebelum dipakai; AI tidak membuat diagnosis atau resep.";

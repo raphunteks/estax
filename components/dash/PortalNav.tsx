@@ -5,7 +5,15 @@ import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
 import ThemeMenu from "@/components/ThemeMenu";
 
-const ITEMS: [string, string, boolean][] = [["/portal", "Ringkasan", true], ["/portal/akun", "Akun saya", true], ["/portal/janji", "Janji", true], ["/portal/riwayat", "Riwayat", true], ["/portal/tagihan", "Tagihan", true], ["/portal/tanya", "Tanya", true]];
+const ITEMS: [string, string, boolean][] = [
+  ["/portal", "Ringkasan", true],
+  ["/portal/akun", "Akun saya", true],
+  ["/portal/janji", "Janji", true],
+  ["/portal/riwayat", "Riwayat", true],
+  ["/portal/tagihan", "Tagihan", true],
+  ["/portal/tanya", "Tanya", true],
+  ["/portal/bicara", "Telepon AI", true],
+];
 
 export default function PortalNav({ locked }: { locked: boolean }) {
   const path = usePathname();

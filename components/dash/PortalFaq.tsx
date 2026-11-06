@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { RotateCcw, SendHorizontal, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Phone, RotateCcw, SendHorizontal, Sparkles } from "lucide-react";
 import { api } from "./kit";
 
 type Msg = { role: "user" | "assistant"; content: string };
@@ -51,6 +52,25 @@ export default function PortalFaq() {
         </div>
         {msgs.length > 0 && <button onClick={reset} aria-label="Mulai percakapan baru" className="grid size-10 place-items-center rounded-full border border-line text-muted transition-transform active:scale-95"><RotateCcw size={16} aria-hidden="true" /></button>}
       </header>
+
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-accent/30 bg-accent/10 p-3">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-accent text-bg">
+            <Phone size={16} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold">Mode Panggilan Suara / Telepon AI</p>
+            <p className="text-[11px] text-muted">Bicara langsung dua arah dengan AI tanpa mengetik</p>
+          </div>
+        </div>
+        <Link
+          href="/portal/bicara"
+          className="shrink-0 rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-bg transition-transform active:scale-95"
+        >
+          Bicara Suara
+        </Link>
+      </div>
+
       <p className="mt-3 rounded-xl border border-line px-3 py-2 text-xs text-muted">Dijawab oleh AI dan bisa keliru. Tidak memberi diagnosis dan tidak melihat data medis Anda. Untuk keluhan, hubungi klinik.</p>
 
       <ul className="mt-4 min-h-[40dvh] space-y-3" aria-live="polite" aria-label="Percakapan">
