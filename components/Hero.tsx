@@ -65,7 +65,7 @@ export default function Hero() {
         <div className="grain absolute inset-0" />
       </div>
 
-      <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="mx-auto grid w-full max-w-6xl items-center gap-8 px-4 py-10 sm:gap-10 sm:px-6 sm:py-16 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="h-copy">
           <p className="eyebrow hero-a h-eyebrow">
             <L v={hero.eyebrow} />
@@ -86,7 +86,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="h-media-wrap relative mx-auto aspect-square w-full max-w-[520px]" aria-hidden="true">
+        <div className="h-media-wrap relative mx-auto aspect-square w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[520px]" aria-hidden="true">
           <div className="hero-a h-media size-full">
             <svg viewBox="0 0 600 600" className="size-full overflow-visible">
               <defs>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge, Empty, Skeleton, StatusBadge, api, fmtDate } from "./kit";
+import PushPrompt from "./PushPrompt";
 
 type Home = {
   patient: { name: string; rmNo: string | null; status: string } | null;
@@ -37,6 +38,7 @@ export default function PortalHome({ name }: { name: string }) {
             <div><p className="text-xs text-muted">No. Rekam Medis</p><p className="display text-2xl tabular-nums">{d.patient.rmNo ?? "Belum terbit"}</p></div>
             <Badge tone={d.patient.rmNo ? "ok" : "warn"}>{d.patient.rmNo ? "Terverifikasi" : "Menunggu verifikasi klinik"}</Badge>
           </div>
+          <PushPrompt />
           {d.queue && (
             <section aria-label="Antrean hari ini" className="rounded-2xl border border-accent/40 bg-accent/10 p-5 text-center">
               <p className="text-xs tracking-widest text-muted uppercase">Antrean Anda</p>

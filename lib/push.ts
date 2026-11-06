@@ -9,12 +9,22 @@ type Vapid = { pub: string; priv: string; subject: string };
 let cached: Vapid | null | undefined;
 async function vapid(): Promise<Vapid | null> {
   if (cached !== undefined) return cached;
-  const subject = process.env.VAPID_SUBJECT || `mailto:${process.env.SMTP_USER || "admin@estaka.invalid"}`;
-  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) return (cached = { pub: process.env.VAPID_PUBLIC_KEY, priv: process.env.VAPID_PRIVATE_KEY, subject });
-  if (process.env.NODE_ENV === "production") return (cached = null);
-  let k = await db().get<{ pub: string; priv: string }>("push:vapid");
-  if (!k) { const g = webpush.generateVAPIDKeys(); k = { pub: g.publicKey, priv: g.privateKey }; await db().set("push:vapid", k); }
-  return (cached = { ...k, subject });
+  const subject = process.env.VAPID_SUBJECT || `mailto:${process.env.SMTP_USER || "sentrovahelp@gmail.com"}`;
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    return (cached = { pub: process.env.VAPID_PUBLIC_KEY, priv: process.env.VAPID_PRIVATE_KEY, subject });
+  }
+  try {
+    let k = await db().get<{ pub: string; priv: string }>("push:vapid");
+    if (!k || !k.pub || !k.priv) {
+      const g = webpush.generateVAPIDKeys();
+      k = { pub: g.publicKey, priv: g.privateKey };
+      await db().set("push:vapid", k);
+    }
+    return (cached = { ...k, subject });
+  } catch (e) {
+    console.error("VAPID store lookup/generation error:", e);
+    return null;
+  }
 }
 export const publicKey = async () => (await vapid())?.pub ?? null;
 

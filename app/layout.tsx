@@ -5,7 +5,7 @@ import { clinic } from "@/lib/content";
 import PwaRegister from "@/components/PwaRegister";
 import "./globals.css";
 
-// Self-hosted (Instrument Serif + Manrope, both OFL). No third-party font requests.
+// Self-hosted (Instrument Serif + Manrope, both OFL). Preloaded to eliminate FOUT and CLS on mobile.
 const display = localFont({
   src: [
     { path: "./fonts/instrument-serif-400.woff2", weight: "400", style: "normal" },
@@ -13,14 +13,18 @@ const display = localFont({
   ],
   variable: "--font-instrument",
   display: "swap",
-  preload: false,
+  preload: true,
+  fallback: ["Georgia", "Times New Roman", "serif"],
+  adjustFontFallback: "Times New Roman",
 });
 const sans = localFont({
   src: "./fonts/manrope-var.woff2",
   weight: "200 800",
   variable: "--font-manrope",
   display: "swap",
-  preload: false,
+  preload: true,
+  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+  adjustFontFallback: "Arial",
 });
 
 const description =
