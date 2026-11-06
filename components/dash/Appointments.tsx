@@ -298,8 +298,8 @@ function Calendar({ role, userId, onBook }: { role: Role; userId: string; onBook
   );
 }
 
-export default function Appointments({ role, userId, patient }: { role: Role; userId: string; patient?: { id: string; name: string; rmNo: string | null } }) {
-  const [tab, setTab] = useState(patient ? "new" : staffRole(role) ? "req" : "cal");
+export default function Appointments({ role, userId, patient, tab: initial }: { role: Role; userId: string; patient?: { id: string; name: string; rmNo: string | null }; tab?: string }) {
+  const [tab, setTab] = useState(patient ? "new" : initial === "queue" || initial === "cal" || (initial === "req" && staffRole(role)) ? initial : staffRole(role) ? "req" : "cal");
   const [preset, setPreset] = useState<{ doctorId?: string; date?: string; time?: string }>();
   const [ok, setOk] = useState("");
   const tabs: [string, string][] = [...(staffRole(role) ? ([["req", "Permintaan"]] as [string, string][]) : []), ["queue", "Antrian hari ini"], ["cal", "Kalender"], ...(staffRole(role) ? ([["wa", "Pengingat"]] as [string, string][]) : []), ...(staffRole(role) ? ([["new", "Buat janji"]] as [string, string][]) : [])];

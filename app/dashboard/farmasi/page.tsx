@@ -3,7 +3,7 @@ import Pharmacy from "@/components/dash/Pharmacy";
 import { getAuth } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Farmasi & Stok" };
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { user } = (await getAuth())!;
-  return <Pharmacy role={user.role as "superadmin" | "dokter" | "staf" | "apoteker"} />;
+  return <Pharmacy role={user.role as "superadmin" | "dokter" | "staf" | "apoteker"} tab={(await searchParams).tab} />;
 }

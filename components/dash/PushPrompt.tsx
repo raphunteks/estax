@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { api } from "./kit";
 
 const toKey = (b64: string) => {
@@ -8,115 +8,47 @@ const toKey = (b64: string) => {
   const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 };
+const get = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+const set = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
 
-export default function PushPrompt() {
-  const [supported, setSupported] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    const ok = typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    setSupported(ok);
-    if (!ok) return;
-
-    if (Notification.permission === "granted") {
-      void navigator.serviceWorker.getRegistration("/").then(async (reg) => {
-        const sub = await reg?.pushManager.getSubscription();
-        if (sub) setEnabled(true);
-      });
-    }
-  }, []);
-
-  async function activate() {
-    setBusy(true);
-    setMsg("");
-    try {
-      const reg = (await navigator.serviceWorker.getRegistration("/")) ?? (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
-      await navigator.serviceWorker.ready;
-
-      const p = await Notification.requestPermission();
-      if (p !== "granted") {
-        setMsg("Izin notifikasi ditolak. Anda dapat mengaktifkannya di pengaturan izin browser.");
-        return;
-      }
-
-      const k = await api<{ key: string | null }>("/api/push/key");
-      if (!k.ok || !k.key) {
-        setMsg("Gagal memuat kunci server push.");
-        return;
-      }
-
-      const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: toKey(k.key),
-      }));
-
-      const r = await api("/api/push/subscribe", "POST", { subscription: sub.toJSON() });
-      if (!r.ok) {
-        setMsg("Gagal mendaftarkan langganan notifikasi.");
-        return;
-      }
-
-      // Send test notification to verify immediately
-      await api("/api/push/test", "POST");
-      setEnabled(true);
-      setMsg("✓ Notifikasi berhasil aktif di perangkat ini! Kami telah mengirim notifikasi percobaan.");
-    } catch (e) {
-      console.error(e);
-      setMsg("Gagal mengaktifkan notifikasi di perangkat ini.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!supported || dismissed || enabled) {
-    if (enabled) {
-      return (
-        <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-400">
-          <span className="flex items-center gap-2">
-            <span className="size-2 rounded-full bg-emerald-400" />
-            Notifikasi push aktif di perangkat ini (Pengingat janji, antrean &amp; info promo).
-          </span>
-        </div>
-      );
-    }
-    return null;
-  }
-
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-accent/40 bg-gradient-to-r from-accent/15 via-accent/10 to-transparent p-4 sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-lg" aria-hidden="true">🔔</span>
-            <p className="font-semibold text-fg">Aktifkan Notifikasi di HP / Perangkat Anda</p>
-          </div>
-          <p className="text-xs text-muted sm:text-sm">
-            Dapatkan pemberitahuan langsung saat antrean giliran Anda dipanggil, pengingat janji temu, dan info promo eksklusif.
-          </p>
-          {msg && <p className="mt-1 text-xs text-accent" role="status">{msg}</p>}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setDismissed(true)}
-            className="rounded-lg px-3 py-1.5 text-xs text-muted hover:text-fg"
-          >
-            Nanti saja
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void activate()}
-            className="btn btn-primary min-h-9 px-4 py-1.5 text-xs font-semibold"
-          >
-            {busy ? "Mengaktifkan…" : "Izinkan Notifikasi"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+/** Registers this device for push for the signed-in user. Returns true when a subscription is stored. */
+async function subscribe(): Promise<boolean> {
+  const reg = (await navigator.serviceWorker.getRegistration("/")) ?? (await navigator.serviceWorker.register("/sw.js", { scope: "/" }));
+  await navigator.serviceWorker.ready;
+  const k = await api<{ key: string | null }>("/api/push/key");
+  if (!k.ok || !k.key) return false;
+  const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toKey(k.key) }));
+  return (await api("/api/push/subscribe", "POST", { subscription: sub.toJSON() })).ok;
 }
 
+/**
+ * Invisible. Asks for notification permission once, on the first tap/key after sign-in (browsers only
+ * allow the prompt after a user gesture), and never asks again on this browser. If permission was
+ * already granted, it silently re-registers the device. Also unlocks in-app sound on that same gesture.
+ * Management and turning it off stay in Account > Aplikasi & notifikasi.
+ */
+export default function PushPrompt({ uid }: { uid: string }) {
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return;
+    const askedKey = `estaka:push-asked:${uid}`;
+    let off = () => {};
+    const run = async () => {
+      try {
+        if (Notification.permission === "granted") { if (!sessionStorage.getItem(`estaka:push-sync:${uid}`)) { await subscribe(); sessionStorage.setItem(`estaka:push-sync:${uid}`, "1"); } return; }
+        if (Notification.permission !== "default" || get(askedKey)) return;
+        const onGesture = () => {
+          off();
+          set(askedKey, String(Date.now()));
+          try { const A = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext; void new A().resume(); } catch { /* sound unlock is best effort */ }
+          void Notification.requestPermission().then(async (p) => { if (p === "granted") { await subscribe(); await api("/api/push/test", "POST"); } }).catch(() => null);
+        };
+        window.addEventListener("pointerdown", onGesture, { once: true });
+        window.addEventListener("keydown", onGesture, { once: true });
+        off = () => { window.removeEventListener("pointerdown", onGesture); window.removeEventListener("keydown", onGesture); };
+      } catch { /* unsupported browser: stay silent */ }
+    };
+    void run();
+    return () => off();
+  }, [uid]);
+  return null;
+}

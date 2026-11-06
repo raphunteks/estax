@@ -201,9 +201,9 @@ function Log() {
   return <ul className="glass divide-y divide-line rounded-2xl px-4 text-sm">{m.map((x, i) => <li key={i} className="flex flex-wrap justify-between gap-2 py-2.5"><span>{x.name} · {L[x.type] ?? x.type} {x.qty ? (x.qty > 0 ? `+${x.qty}` : x.qty) : ""}{x.note ? ` · ${x.note}` : ""}</span><span className="text-muted">{x.byName} · {new Date(x.t).toLocaleString("id-ID", { timeZone: "Asia/Makassar", dateStyle: "short", timeStyle: "short" })}</span></li>)}</ul>;
 }
 
-export default function Pharmacy({ role }: { role: "superadmin" | "dokter" | "staf" | "apoteker" }) {
+export default function Pharmacy({ role, tab: initial }: { role: "superadmin" | "dokter" | "staf" | "apoteker"; tab?: string }) {
   const canRx = role === "superadmin" || role === "apoteker";
-  const [tab, setTab] = useState(role === "apoteker" ? "rx" : "stock");
+  const [tab, setTab] = useState(initial === "stock" || initial === "log" || (initial === "rx" && canRx) ? initial : role === "apoteker" ? "rx" : "stock");
   const tabs: [string, string][] = [...(canRx ? ([["rx", "Resep"]] as [string, string][]) : []), ["stock", "Stok"], ["log", "Riwayat stok"]];
   return (
     <div>

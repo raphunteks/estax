@@ -6,5 +6,5 @@ export const metadata: Metadata = { title: "Portal pasien", robots: { index: fal
 
 export default async function Page() {
   const { user } = (await getAuth())!;
-  return <PortalHome name={user.name.split(" ")[0]} />;
+  return <PortalHome name={user.name.split(" ")[0]} userId={user.id} photo={user.photo} />;
 }

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import PushPrompt from "@/components/dash/PushPrompt";
 import Shell from "@/components/dash/Shell";
 import { getAuth } from "@/lib/auth/session";
 import { twoFaRequired } from "@/lib/auth/users";
@@ -25,6 +26,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
   const items = navFor(user.role).map((n) => ({ href: n.href, label: n.label.id, icon: n.icon, soon: !LIVE.includes(n.href), group: n.group }));
   return (
     <Shell items={items} user={{ id: user.id, photo: user.photo, name: user.name, role: user.role, email: user.email }} locked={locked}>
+      {!locked && <PushPrompt uid={user.id} />}
       {children}
     </Shell>
   );

@@ -40,7 +40,7 @@ export default function Charts({ s }: { s: Stats }) {
   const kpis: [string, number | null, string][] = [["Janji hari ini", s.kpi.today, ""], ["Menunggu konfirmasi", s.kpi.pending, ""], ["Di ruang tunggu", s.kpi.waiting, ""], ["Selesai hari ini", s.kpi.done, ""], ["Total pasien", s.kpi.patients, ""], ["Rata-rata tunggu", s.kpi.avgWait, " mnt"]];
   return (
     <div ref={root}>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="hidden grid-cols-2 gap-3 lg:grid lg:grid-cols-6">
         {kpis.filter(([, v]) => v !== null || false).map(([l, v, u]) => (
           <div key={l} className="glass ch-card rounded-2xl p-4">
             <p className="text-xs text-muted">{l}</p>

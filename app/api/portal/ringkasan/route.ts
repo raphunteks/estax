@@ -1,6 +1,8 @@
 import { fail, isResponse, json, requireAuth } from "@/lib/api";
 import { ACTIVE, listAppts } from "@/lib/clinic/appointments";
 import { due, listInvoices } from "@/lib/clinic/billing";
+import { consentsOfPatient } from "@/lib/clinic/care";
+import { surveyDone } from "@/lib/clinic/engage";
 import { ownIds, ownPatients } from "@/lib/clinic/family";
 import { getPromo, isLive, listPromos } from "@/lib/clinic/promos";
 import { present } from "@/lib/clinic/present";
@@ -34,12 +36,15 @@ export async function GET() {
   const arrivable = next.find((x) => x.date === today && x.status === "dikonfirmasi");
   const promoCount = (await listPromos()).filter((x) => isLive(x)).length;
   void getPromo;
+  const pendingConsent = (await Promise.all(ids.map(consentsOfPatient))).flat().filter((c) => c.status === "menunggu").length;
+  let pendingSurvey = 0;
+  for (const v of visits.slice(0, 5)) if (!(await surveyDone(v.id))) pendingSurvey++;
   return json({
     ok: true,
     patient: { name: p.name, rmNo: p.rmNo ?? null, status: p.status },
     next: n ? { id: n.id, date: n.date, time: n.time, doctorName: n.doctorName, patientName: n.patientName, status: n.status, queueNo: n.queueNo ?? null } : null,
     arrivable: arrivable ? { id: arrivable.id, time: arrivable.time } : null,
-    queue, promoCount, family: members.length - 1,
+    queue, promoCount, pending: { consent: pendingConsent, survey: pendingSurvey }, family: members.length - 1,
     upcoming: next.length,
     dueTotal: bills.reduce((s, i) => s + due(i), 0),
     unpaid: bills.filter((i) => due(i) > 0).length,

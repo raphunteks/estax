@@ -3,18 +3,40 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge, Empty, Skeleton, StatusBadge, api, fmtDate } from "./kit";
-import PushPrompt from "./PushPrompt";
+import { Bell, CalendarCheck, ChevronRight, ClipboardSignature, FileImage, Gift, MessageCircle, Pill, Receipt, Star, Stethoscope, Users, BookOpen, type LucideIcon } from "lucide-react";
 
 type Home = {
   patient: { name: string; rmNo: string | null; status: string } | null;
   next?: { date: string; time: string; doctorName: string; patientName?: string; status: string; queueNo: number | null } | null;
   arrivable?: { id: string; time: string } | null; queue?: { no: number | null; ahead: number; status: string } | null; promoCount?: number; family?: number;
   upcoming?: number; dueTotal?: number; unpaid?: number; visitCount?: number; lastVisit?: string | null;
+  pending?: { consent: number; survey: number };
   items: { id: string; t: number; title: string; body: string; url?: string }[];
 };
 const rp = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
-export default function PortalHome({ name }: { name: string }) {
+const TINT = { rose: "#f43f5e", sky: "#38bdf8", amber: "#f59e0b", green: "#10b981", violet: "#8b5cf6", teal: "#14b8a6" } as const;
+const tint = (c: keyof typeof TINT) => ({ "--t": TINT[c], background: "color-mix(in oklab, var(--t) 13%, transparent)", borderColor: "color-mix(in oklab, var(--t) 28%, transparent)" }) as React.CSSProperties;
+function Kpi({ href, icon: I, c, value, label }: { href: string; icon: LucideIcon; c: keyof typeof TINT; value: string | number; label: string }) {
+  return (
+    <Link href={href} style={tint(c)} className="flex flex-col items-center rounded-2xl border px-1 py-3 text-center transition-transform active:scale-[0.97]">
+      <I size={20} aria-hidden="true" style={{ color: "var(--t)" }} />
+      <span className="display mt-1 text-xl leading-none tabular-nums">{value}</span>
+      <span className="mt-1 text-[11px] leading-tight text-muted">{label}</span>
+    </Link>
+  );
+}
+function Action({ href, icon: I, c, label, badge }: { href: string; icon: LucideIcon; c: keyof typeof TINT; label: string; badge?: number }) {
+  return (
+    <Link href={href} style={tint(c)} className="group relative flex min-h-24 flex-col justify-between rounded-2xl border p-3 transition-transform active:scale-[0.97]">
+      <I size={24} aria-hidden="true" style={{ color: "var(--t)" }} />
+      <span className="flex items-end justify-between gap-1 text-sm font-medium leading-tight">{label}<ChevronRight size={16} className="shrink-0 text-muted" aria-hidden="true" /></span>
+      {badge ? <span className="absolute right-2 top-2 grid min-w-5 place-items-center rounded-full bg-[var(--bad)] px-1 text-[11px] font-semibold text-white" aria-label={`${badge} menunggu`}>{badge}</span> : null}
+    </Link>
+  );
+}
+
+export default function PortalHome({ name, userId, photo }: { name: string; userId: string; photo?: string }) {
   const [d, setD] = useState<Home | null>(null);
   const [arrMsg, setArrMsg] = useState("");
   const load = () => void api<Home>("/api/portal/ringkasan").then((r) => setD(r.ok ? (r as unknown as Home) : { patient: null, items: [] }));
@@ -28,17 +50,31 @@ export default function PortalHome({ name }: { name: string }) {
     const i = setInterval(() => document.visibilityState === "visible" && load(), 10000);
     return () => (clearTimeout(t), clearInterval(i));
   }, []);
-  const tile = "glass rounded-2xl p-4 transition-transform active:scale-[0.98]";
   return (
     <div>
-      <h1 className="display text-3xl">Halo, {name}</h1>
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-muted">{new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Makassar" })}</p>
+          <h1 className="display truncate text-3xl">Halo, {name}</h1>
+          <p className="text-sm text-muted">Ringkasan layanan Anda hari ini.</p>
+        </div>
+        <Link href="/portal/akun" aria-label="Akun saya" className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-accent/15 text-xl font-semibold text-accent transition-transform active:scale-95">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {photo ? <img src={`/api/files/avatar/${userId}?v=${photo}`} alt="" width={64} height={64} className="size-16 object-cover" /> : name.slice(0, 1).toUpperCase()}
+        </Link>
+      </header>
       {!d ? <div className="mt-6"><Skeleton /></div> : !d.patient ? <div className="mt-6"><Empty>Data pasien Anda belum tersedia. Hubungi klinik.</Empty></div> : (
         <div className="mt-5 space-y-4">
           <div className="glass flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4">
             <div><p className="text-xs text-muted">No. Rekam Medis</p><p className="display text-2xl tabular-nums">{d.patient.rmNo ?? "Belum terbit"}</p></div>
             <Badge tone={d.patient.rmNo ? "ok" : "warn"}>{d.patient.rmNo ? "Terverifikasi" : "Menunggu verifikasi klinik"}</Badge>
           </div>
-          <PushPrompt />
+          <section aria-label="Ringkasan" className="grid grid-cols-4 gap-2">
+            <Kpi href="/portal/janji" icon={CalendarCheck} c="rose" value={d.upcoming ?? 0} label="Janji aktif" />
+            <Kpi href="/portal/riwayat" icon={Stethoscope} c="sky" value={d.visitCount ?? 0} label="Kunjungan" />
+            <Kpi href="/portal/tagihan" icon={Receipt} c="amber" value={d.unpaid ?? 0} label="Tagihan" />
+            <Kpi href="/portal/promo" icon={Gift} c="green" value={d.promoCount ?? 0} label="Promo" />
+          </section>
           {d.queue && (
             <section aria-label="Antrean hari ini" className="rounded-2xl border border-accent/40 bg-accent/10 p-5 text-center">
               <p className="text-xs tracking-widest text-muted uppercase">Antrean Anda</p>
@@ -54,10 +90,19 @@ export default function PortalHome({ name }: { name: string }) {
               <p role="status" className="mt-2 min-h-5 text-sm text-muted">{arrMsg}</p>
             </section>
           )}
-          <section aria-label="Layanan" className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {([["/portal/persetujuan", "Persetujuan"], ["/portal/obat", "Obat"], ["/portal/edukasi", "Edukasi"], ["/portal/berkas", "Foto & rontgen"], ["/portal/keluarga", "Keluarga"], ["/portal/pesan", "Pesan"], ["/portal/survei", "Survei"], ["/portal/promo", "Promo"]] as const).map(([h, l]) => (
-              <Link key={h} href={h} className="glass flex min-h-16 items-center justify-center rounded-2xl p-2 text-center text-sm transition-transform active:scale-[0.97]">{l}</Link>
-            ))}
+          <section aria-label="Layanan">
+            <h2 className="mb-2 font-medium">Layanan cepat</h2>
+            <div className="grid grid-cols-3 gap-2">
+              <Action href="/portal/janji" icon={CalendarCheck} c="rose" label="Buat janji" />
+              <Action href="/portal/persetujuan" icon={ClipboardSignature} c="sky" label="Persetujuan" badge={d.pending?.consent} />
+              <Action href="/portal/obat" icon={Pill} c="green" label="Obat" />
+              <Action href="/portal/edukasi" icon={BookOpen} c="amber" label="Edukasi" />
+              <Action href="/portal/berkas" icon={FileImage} c="violet" label="Foto & rontgen" />
+              <Action href="/portal/keluarga" icon={Users} c="teal" label="Keluarga" badge={undefined} />
+              <Action href="/portal/pesan" icon={MessageCircle} c="sky" label="Pesan" />
+              <Action href="/portal/survei" icon={Star} c="amber" label="Survei" badge={d.pending?.survey} />
+              <Action href="/portal/akun" icon={Bell} c="rose" label="Notifikasi" />
+            </div>
           </section>
           <section aria-label="Janji berikutnya" className="glass rounded-2xl p-4">
             <div className="flex items-center justify-between"><h2 className="font-medium">Janji berikutnya</h2><Link href="/portal/janji" className="text-sm text-accent">Semua janji</Link></div>
@@ -68,11 +113,6 @@ export default function PortalHome({ name }: { name: string }) {
               </div>
             ) : <p className="mt-2 text-sm text-muted">Belum ada janji. <Link href="/portal/janji" className="text-accent">Buat janji</Link></p>}
           </section>
-          <div className="grid grid-cols-2 gap-3">
-            <Link href="/portal/tagihan" className={tile}><p className="text-xs text-muted">Tagihan belum lunas</p><p className="display mt-1 text-xl">{d.dueTotal ? rp(d.dueTotal) : "Lunas"}</p>{d.unpaid ? <p className="text-xs text-muted">{d.unpaid} tagihan</p> : null}</Link>
-            <Link href="/portal/riwayat" className={tile}><p className="text-xs text-muted">Kunjungan selesai</p><p className="display mt-1 text-xl">{d.visitCount ?? 0}</p>{d.lastVisit ? <p className="text-xs text-muted">Terakhir {fmtDate(d.lastVisit)}</p> : null}</Link>
-          </div>
-          {(d.promoCount ?? 0) > 0 && <Link href="/portal/promo" className="glass flex items-center justify-between rounded-2xl p-4"><span><span className="font-medium">Promo untuk Anda</span><span className="block text-sm text-muted">{d.promoCount} promo sedang berlaku</span></span><span className="text-accent">Lihat</span></Link>}
           <section aria-label="Notifikasi" className="glass rounded-2xl p-4">
             <div className="flex items-center justify-between"><h2 className="font-medium">Notifikasi terbaru</h2><Link href="/portal/akun" className="text-sm text-accent">Atur</Link></div>
             {d.items.length === 0 ? <p className="mt-2 text-sm text-muted">Belum ada notifikasi. Aktifkan notifikasi di Akun agar panggilan antrean sampai ke ponsel Anda.</p> : (

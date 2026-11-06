@@ -352,3 +352,12 @@ Diuji dengan mock server OpenAI-compatible (46 cek). Belum diuji ke 9Router asli
 - Belum: pembayaran online. Kuitansi PDF sudah ada; integrasi Pakasir v2 atau gateway lain ditambahkan kemudian (jangan memalsukan status bayar).
 - Env: `NEXT_PUBLIC_SITE_URL=https://estakadentalclinic.vercel.app` menentukan rpID/origin passkey. Pasang `CRON_SECRET` dan jadwalkan pemanggilan `/api/cron/reminders` (Vercel Cron atau layanan lain).
 - Lockfile: proyek memakai pnpm (`pnpm-lock.yaml`); jangan menambahkan `package-lock.json`.
+
+## Status: bottom nav mobile per peran (fase 17)
+- `components/dash/BottomNav.tsx`: 5 tombol per peran, tampil di bawah `lg` (mobile + tablet), disembunyikan di desktop (sidebar). Semua tujuan disaring RBAC dari NAV; akun terkunci hanya bisa Akun.
+- Dokter: Beranda | Antrian (badge menunggu) | Periksa (mulai/buka kunjungan pasien yang dipanggil/berikutnya) | Pasien | Lainnya.
+- Staf: Beranda | Janji (badge konfirmasi) | Check-in (sheet "Tandai tiba") | Kasir (badge belum bayar) | Lainnya.
+- Apoteker: Beranda | Resep (badge) | Panggil (resep berikutnya) | Stok (badge stok menipis) | Lainnya.
+- Superadmin: Beranda | Janji | Cari pasien (sheet) | Analitik | Lainnya.
+- "Lainnya": sheet menu per grup + badge + Keluar.
+- Data: `GET /api/dash/mobile` (badge, KPI, pasien utama, daftar check-in; tiap bagian dibatasi izin; pasien 403), polling 10 dtk. Beranda dasbor memakai `RoleKpi`. Deep link `?tab=queue` (Janji) dan `?tab=rx|stock` (Farmasi).
