@@ -6,7 +6,7 @@ description: Informasi dan cara membuat janji di Estaka Dental Clinic (dokter gi
 # Estaka Dental Clinic
 
 ## Membuat janji
-Buka http://localhost:3000/#booking, atau daftar sebagai pasien di http://localhost:3000/daftar lalu pilih dokter, tanggal dan jam di portal. Slot yang tersedia mengikuti jadwal dokter (zona waktu WITA). Pasien dapat membatalkan atau mengubah janji paling lambat 1 jam sebelum jadwal.
+Buka https://estakadentalclinic.vercel.app/#booking, atau daftar sebagai pasien di https://estakadentalclinic.vercel.app/daftar lalu pilih dokter, tanggal dan jam di portal. Slot yang tersedia mengikuti jadwal dokter (zona waktu WITA). Pasien dapat membatalkan atau mengubah janji paling lambat 1 jam sebelum jadwal.
 
 ## Jam praktik
 - Senin – Sabtu: 09:00 – 17:00

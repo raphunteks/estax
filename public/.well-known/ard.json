@@ -2,10 +2,10 @@
   "specVersion": "0.91",
   "entries": [
     {
-      "identifier": "urn:air:localhost:estaka:clinic-skill",
+      "identifier": "urn:air:estakadentalclinic.vercel.app:estaka:clinic-skill",
       "displayName": "Estaka Dental Clinic: informasi dan janji temu",
       "type": "text/markdown; profile=\"urn:air:agent-skills\"",
-      "url": "http://localhost:3000/.well-known/agent-skills/estaka/SKILL.md",
+      "url": "https://estakadentalclinic.vercel.app/.well-known/agent-skills/estaka/SKILL.md",
       "description": "Jam praktik, dokter, layanan dan cara membuat janji di klinik gigi.",
       "capabilities": [
         "clinic-info",

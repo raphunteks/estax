@@ -3,10 +3,10 @@
 > Klinik gigi dengan dokter gigi umum dan spesialis konservasi gigi. Pasien dapat membuat janji online, dan biaya akhir ditentukan setelah pemeriksaan.
 
 ## Halaman
-- [Beranda](http://localhost:3000/): profil klinik, dokter, layanan, biaya dan FAQ
-- [Buat janji](http://localhost:3000/#booking): formulir janji temu
-- [Masuk pasien dan staf](http://localhost:3000/masuk)
-- [Daftar pasien baru](http://localhost:3000/daftar)
+- [Beranda](https://estakadentalclinic.vercel.app/): profil klinik, dokter, layanan, biaya dan FAQ
+- [Buat janji](https://estakadentalclinic.vercel.app/#booking): formulir janji temu
+- [Masuk pasien dan staf](https://estakadentalclinic.vercel.app/masuk)
+- [Daftar pasien baru](https://estakadentalclinic.vercel.app/daftar)
 
 ## Jam praktik (WITA)
 - Senin – Sabtu: 09:00 – 17:00
@@ -29,4 +29,4 @@
 - Alamat: Jl. Andi Tonro Blok F No.30, Bongaya, Kec. Tamalate, Kota Makassar, Sulawesi Selatan 90131
 
 ## Optional
-- [Agent skill](http://localhost:3000/.well-known/agent-skills/estaka/SKILL.md)
+- [Agent skill](https://estakadentalclinic.vercel.app/.well-known/agent-skills/estaka/SKILL.md)

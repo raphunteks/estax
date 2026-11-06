@@ -22,8 +22,26 @@ export function pageMetadata(k: PageKey): Metadata {
     title: p.title,
     description: p.description,
     alternates: { canonical: p.path },
-    openGraph: { title: `${p.title} | ${clinic.name}`, description: p.description, url: p.path, type: "website", locale: "id_ID", siteName: clinic.name, images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: clinic.name }] },
-    twitter: { card: "summary_large_image", title: p.title, description: p.description, images: ["/opengraph-image"] },
+    icons: {
+      icon: [
+        { url: "/favicon.ico", sizes: "any" },
+        { url: "/icon.svg", type: "image/svg+xml" },
+      ],
+      apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    },
+    openGraph: {
+      title: `${p.title} | ${clinic.name}`,
+      description: p.description,
+      url: p.path,
+      type: "website",
+      locale: "id_ID",
+      siteName: clinic.name,
+      images: [
+        { url: "/og-image.jpg", width: 1200, height: 630, alt: `${p.title} - ${clinic.name}`, type: "image/jpeg" },
+        { url: "/og-image.png", width: 1200, height: 630, alt: `${p.title} - ${clinic.name}`, type: "image/png" },
+      ],
+    },
+    twitter: { card: "summary_large_image", title: p.title, description: p.description, images: ["/og-image.jpg"] },
   };
 }
 
@@ -39,7 +57,7 @@ export function dentistLd(o: { address?: string; phone?: string; instagram?: str
     "@id": abs("/#clinic"),
     name: clinic.name,
     url: abs("/"),
-    image: abs("/opengraph-image"),
+    image: abs("/og-image.jpg"),
     ...(phone && { telephone: phone }),
     ...(address && { address: { "@type": "PostalAddress", streetAddress: address, addressLocality: "Makassar", addressRegion: "Sulawesi Selatan", addressCountry: "ID" } }),
     geo: { "@type": "GeoCoordinates", latitude: clinic.geo.lat, longitude: clinic.geo.lng },

@@ -7,8 +7,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next dev",
+    "gen:assets": "tsx --tsconfig tsconfig.json scripts/gen-assets.ts",
     "gen:agent": "tsx --tsconfig tsconfig.json scripts/gen-agent.ts",
-    "build": "tsx --tsconfig tsconfig.json scripts/gen-agent.ts && next build",
+    "build": "tsx --tsconfig tsconfig.json scripts/gen-assets.ts && tsx --tsconfig tsconfig.json scripts/gen-agent.ts && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
