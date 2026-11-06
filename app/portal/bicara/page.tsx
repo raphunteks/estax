@@ -6,3 +6,4 @@ export const metadata: Metadata = { title: "Telepon AI · Estaka" };
 export default function Page() {
   return <VoiceCall />;
 }
+

@@ -198,10 +198,70 @@ export async function probe() {
   return out;
 }
 
-/** Text-to-speech. Returns mp3 bytes. */
-export async function speak(input: string, model: string) {
-  if (!aiReady) throw new AiError("ai_not_configured");
-  const res = await fetch(`${base}/audio/speech`, { method: "POST", headers: headers(), body: JSON.stringify({ model, input }), signal: AbortSignal.timeout(60_000) });
-  if (!res.ok) throw new AiError(`tts_${res.status}`);
-  return res.arrayBuffer();
+/** Text-to-speech. Returns mp3 bytes. Uses 9Router if available and credits present; falls back to high-fidelity Indonesian speech synthesis. */
+export async function speak(input: string, model = "default") {
+  if (model !== "default" && aiReady) {
+    try {
+      const res = await fetch(`${base}/audio/speech`, {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ model, input }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) return await res.arrayBuffer();
+    } catch {
+      // Fallback
+    }
+  }
+
+  // Clean markdown / formatting symbols from text for natural speech
+  const clean = input
+    .replace(/[*#_~`>]/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Split into speech chunks (max ~180 chars per chunk)
+  const chunks: string[] = [];
+  const sentences = clean.split(/(?<=[.!?\n,])\s+/);
+  for (const s of sentences) {
+    if (s.length <= 180) {
+      if (s.trim()) chunks.push(s.trim());
+    } else {
+      const words = s.split(" ");
+      let cur = "";
+      for (const w of words) {
+        if ((cur + " " + w).length > 180) {
+          if (cur.trim()) chunks.push(cur.trim());
+          cur = w;
+        } else {
+          cur = cur ? `${cur} ${w}` : w;
+        }
+      }
+      if (cur.trim()) chunks.push(cur.trim());
+    }
+  }
+
+  if (chunks.length === 0) chunks.push("Siap.");
+
+  try {
+    const buffers: Buffer[] = await Promise.all(
+      chunks.slice(0, 10).map(async (chunk) => {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=id&client=tw-ob`;
+        const r = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!r.ok) throw new AiError(`tts_${r.status}`);
+        return Buffer.from(await r.arrayBuffer());
+      })
+    );
+    const combined = Buffer.concat(buffers);
+    return combined.buffer.slice(combined.byteOffset, combined.byteOffset + combined.byteLength);
+  } catch (e) {
+    console.error("[ai] speak error:", e);
+    throw new AiError("tts_failed");
+  }
 }

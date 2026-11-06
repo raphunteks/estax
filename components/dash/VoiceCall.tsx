@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
-  Headphones,
   Mic,
   MicOff,
   Phone,
@@ -16,6 +15,7 @@ import {
   MessageSquareText,
   Radio,
   SendHorizontal,
+  RefreshCw,
 } from "lucide-react";
 import { api } from "./kit";
 
@@ -31,7 +31,6 @@ const SUGGESTIONS = [
   "Ayo ngobrol santai seputar teknologi modern kedokteran gigi.",
 ];
 
-// Helper to format call duration seconds to MM:SS
 function fmtDuration(sec: number) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -50,6 +49,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   const [customText, setCustomText] = useState("");
   const [audioLevel, setAudioLevel] = useState(0);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
   // References
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -57,14 +57,13 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   const isCallActiveRef = useRef(false);
   const isMutedRef = useRef(false);
   const isAudioMutedRef = useRef(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const currentBlobUrlRef = useRef<string | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const synthVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
-  const speechQueueRef = useRef<string[]>([]);
-  const isSpeakingRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const synthVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const isAudioUnlockedRef = useRef(false);
 
   // Synchronize mutable refs
   useEffect(() => {
@@ -74,112 +73,184 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     isAudioMutedRef.current = isAudioMuted;
   }, [isAudioMuted]);
 
-  // Load voices on mount
+  // Load cached history and preload voices
   useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const pickVoice = () => {
-      const voices = window.speechSynthesis.getVoices();
-      // Look for Indonesian voice first
-      const idVoice = voices.find(
-        (v) => v.lang.toLowerCase().startsWith("id") || v.lang.toLowerCase().includes("indonesia")
-      );
-      synthVoiceRef.current = idVoice || voices[0] || null;
-    };
-    pickVoice();
-    window.speechSynthesis.onvoiceschanged = pickVoice;
-
-    // Restore cached history if present
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
       if (saved) setHistory(JSON.parse(saved));
     } catch {}
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      const pickVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const idVoice = voices.find(
+          (v) => v.lang.toLowerCase().startsWith("id") || v.lang.toLowerCase().includes("indonesia")
+        );
+        synthVoiceRef.current = idVoice || null;
+      };
+      pickVoice();
+      window.speechSynthesis.onvoiceschanged = pickVoice;
+    }
   }, []);
 
-  // Save history to session storage
+  // Save history
   useEffect(() => {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-30)));
     } catch {}
   }, [history]);
 
-  // Stop active speech synthesis
-  const stopSpeaking = useCallback(() => {
+  // Stop any active audio playback
+  const stopAudio = useCallback(() => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      audioPlayerRef.current.currentTime = 0;
+    }
+    if (currentBlobUrlRef.current) {
+      URL.revokeObjectURL(currentBlobUrlRef.current);
+      currentBlobUrlRef.current = null;
+    }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-    speechQueueRef.current = [];
-    isSpeakingRef.current = false;
+    setIsPlayingAudio(false);
   }, []);
 
-  // Speak AI answer with sentence chunking
-  const speakText = useCallback(
-    (fullText: string, onFinish?: () => void) => {
+  // SpeechSynthesis client-side fallback
+  const speakFallback = useCallback(
+    (text: string, onEnded?: () => void) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window) || isAudioMutedRef.current) {
-        onFinish?.();
+        onEnded?.();
         return;
       }
-      stopSpeaking();
-      isSpeakingRef.current = true;
-      setCurrentAiSpeech(fullText);
-
-      // Clean text from Markdown artifacts (like * or #) for cleaner TTS
-      const clean = fullText
-        .replace(/[*#_~`>]/g, "")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-        .trim();
-
-      // Split into sentences (by . ! ? or linebreaks)
-      const sentences = clean
-        .split(/(?<=[.!?\n])\s+/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
-
-      if (sentences.length === 0) {
-        isSpeakingRef.current = false;
-        onFinish?.();
-        return;
-      }
-
-      speechQueueRef.current = [...sentences];
-
-      const playNext = () => {
-        if (!isCallActiveRef.current) {
-          isSpeakingRef.current = false;
-          return;
-        }
-        if (speechQueueRef.current.length === 0) {
-          isSpeakingRef.current = false;
-          onFinish?.();
-          return;
-        }
-
-        const sentence = speechQueueRef.current.shift()!;
-        const utter = new SpeechSynthesisUtterance(sentence);
+      try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.resume();
+        const utter = new SpeechSynthesisUtterance(text);
         if (synthVoiceRef.current) utter.voice = synthVoiceRef.current;
-        utter.lang = synthVoiceRef.current?.lang || "id-ID";
+        utter.lang = "id-ID";
         utter.rate = 1.05;
         utter.pitch = 1.0;
-
         utter.onend = () => {
-          if (isCallActiveRef.current && isSpeakingRef.current) {
-            playNext();
-          }
+          setIsPlayingAudio(false);
+          onEnded?.();
         };
-
-        utter.onerror = (e) => {
-          console.warn("[TTS] Utterance error:", e);
-          if (isCallActiveRef.current && isSpeakingRef.current) {
-            playNext();
-          }
+        utter.onerror = () => {
+          setIsPlayingAudio(false);
+          onEnded?.();
         };
-
+        setIsPlayingAudio(true);
         window.speechSynthesis.speak(utter);
-      };
-
-      playNext();
+      } catch {
+        setIsPlayingAudio(false);
+        onEnded?.();
+      }
     },
-    [stopSpeaking]
+    []
   );
+
+  // Play AI Speech (Primary: Server-rendered MP3 via /api/ai/speech)
+  const playSpeech = useCallback(
+    async (text: string, onEnded?: () => void) => {
+      if (!isCallActiveRef.current || isAudioMutedRef.current) {
+        onEnded?.();
+        return;
+      }
+
+      stopAudio();
+      setIsPlayingAudio(true);
+      setCurrentAiSpeech(text);
+
+      // Mute mic tracks during speech to prevent feedback and ensure iOS routes audio to loudspeaker
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+        });
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+      }
+
+      try {
+        // Fetch studio MP3 audio from /api/ai/speech
+        const res = await fetch("/api/ai/speech", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Speech endpoint returned " + res.status);
+        }
+
+        const blob = await res.blob();
+        if (blob.size < 100) {
+          throw new Error("Empty audio blob");
+        }
+
+        const audioUrl = URL.createObjectURL(blob);
+        currentBlobUrlRef.current = audioUrl;
+
+        let player = audioPlayerRef.current;
+        if (!player) {
+          player = new Audio();
+          audioPlayerRef.current = player;
+        }
+
+        player.src = audioUrl;
+        player.onended = () => {
+          if (currentBlobUrlRef.current) {
+            URL.revokeObjectURL(currentBlobUrlRef.current);
+            currentBlobUrlRef.current = null;
+          }
+          setIsPlayingAudio(false);
+          onEnded?.();
+        };
+
+        player.onerror = (e) => {
+          console.warn("[VoiceCall] Audio player error, falling back to Web Speech:", e);
+          speakFallback(text, onEnded);
+        };
+
+        await player.play();
+      } catch (err) {
+        console.warn("[VoiceCall] Server audio play failed, falling back to Web Speech:", err);
+        speakFallback(text, onEnded);
+      }
+    },
+    [speakFallback, stopAudio]
+  );
+
+  // Resume Web Speech Recognition & Re-enable microphone
+  const resumeListening = useCallback(() => {
+    if (!isCallActiveRef.current) return;
+
+    // Re-enable microphone tracks
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getAudioTracks().forEach((track) => {
+        track.enabled = !isMutedRef.current;
+      });
+    }
+
+    if (isMutedRef.current) return;
+
+    try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {}
+        setTimeout(() => {
+          if (isCallActiveRef.current && !isMutedRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch {}
+          }
+        }, 150);
+      }
+    } catch {}
+  }, []);
 
   // Send question to AI backend (/api/ai/voice)
   const submitQuestion = useCallback(
@@ -187,7 +258,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       const q = text.trim();
       if (!q || !isCallActiveRef.current) return;
 
-      stopSpeaking();
+      stopAudio();
       setState("thinking");
       setLiveTranscript("");
       setErrorNotice(null);
@@ -208,7 +279,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       if (!isCallActiveRef.current) return;
 
       if (!res.ok || !res.text) {
-        setErrorNotice(res.message || "Gagal mendapatkan balasan dari AI. Silakan ulangi ucapan Anda.");
+        setErrorNotice(res.message || "Gagal mendapatkan balasan dari AI. Silakan coba lagi.");
         setState("listening");
         resumeListening();
         return;
@@ -219,32 +290,15 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       setHistory((prev) => [...prev, { role: "assistant", content: answer, time: aiTime }]);
 
       setState("speaking");
-      speakText(answer, () => {
+      playSpeech(answer, () => {
         if (isCallActiveRef.current) {
           setState("listening");
           resumeListening();
         }
       });
     },
-    [history, speakText, stopSpeaking]
+    [history, playSpeech, resumeListening, stopAudio]
   );
-
-  // Resume Web Speech Recognition
-  const resumeListening = useCallback(() => {
-    if (!isCallActiveRef.current || isMutedRef.current) return;
-    try {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        setTimeout(() => {
-          if (isCallActiveRef.current && !isMutedRef.current) {
-            try {
-              recognitionRef.current.start();
-            } catch {}
-          }
-        }, 150);
-      }
-    } catch {}
-  }, []);
 
   // Setup Web Speech Recognition API
   const setupSpeechRecognition = useCallback(() => {
@@ -252,7 +306,6 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.warn("SpeechRecognition not supported in this browser; fallback available.");
       return null;
     }
 
@@ -272,8 +325,8 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       if (!isCallActiveRef.current || isMutedRef.current) return;
 
       // If user starts speaking while AI is speaking, interrupt immediately!
-      if (isSpeakingRef.current) {
-        stopSpeaking();
+      if (isCallActiveRef.current && state === "speaking") {
+        stopAudio();
         setState("listening");
       }
 
@@ -292,7 +345,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       const currentSpeech = final || interim;
       setLiveTranscript(currentSpeech);
 
-      // Debounce silence detection: once user stops talking for 1200ms, send to AI
+      // Debounce silence detection: once user stops talking for 1300ms, send to AI
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
       if (currentSpeech.trim().length > 1) {
         silenceTimeoutRef.current = setTimeout(() => {
@@ -309,7 +362,6 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     };
 
     rec.onend = () => {
-      // Auto restart if call is still active and not thinking/speaking
       if (isCallActiveRef.current && !isMutedRef.current && state === "listening") {
         try {
           rec.start();
@@ -318,7 +370,35 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     };
 
     return rec;
-  }, [state, stopSpeaking, submitQuestion]);
+  }, [state, stopAudio, submitQuestion]);
+
+  // Unlock Audio on user gesture (Essential for iOS Safari / Mobile PWA)
+  const unlockAudioContextAndPlayer = useCallback(() => {
+    if (isAudioUnlockedRef.current) return;
+
+    // 1. Prime HTML5 Audio player
+    try {
+      let player = audioPlayerRef.current;
+      if (!player) {
+        player = new Audio();
+        audioPlayerRef.current = player;
+      }
+      player.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+      player.play().catch(() => {});
+    } catch {}
+
+    // 2. Prime Web Speech API
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      try {
+        window.speechSynthesis.resume();
+        const primer = new SpeechSynthesisUtterance(" ");
+        primer.volume = 0.01;
+        window.speechSynthesis.speak(primer);
+      } catch {}
+    }
+
+    isAudioUnlockedRef.current = true;
+  }, []);
 
   // Start Call Handler
   const startCall = async () => {
@@ -326,14 +406,25 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     setState("connecting");
     setDuration(0);
 
-    // Request microphone permission and initialize audio visualizer
+    // CRITICAL: Unlock audio right in the click event
+    unlockAudioContextAndPlayer();
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       mediaStreamRef.current = stream;
 
-      // Web Audio API for audio level metering
+      // AudioContext Meter for visualizer
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (ctx.state === "suspended") {
+          await ctx.resume();
+        }
         const source = ctx.createMediaStreamSource(stream);
         const analyzer = ctx.createAnalyser();
         analyzer.fftSize = 64;
@@ -370,33 +461,33 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
         } catch {}
       }
 
-      setState("listening");
-
-      // Warm greeting on first start if history is empty
+      // First-time greeting with audio
       if (history.length === 0) {
         const greeting =
-          "Halo! Saya Estaka Voice AI. Silakan tanyakan apa saja atau mulai obrolan santai, saya siap mendengarkan.";
+          "Halo! Saya Estaka Voice AI. Silakan tanyakan apa saja seputar klinik atau obrolan santai, saya siap mendengarkan.";
         const time = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
         setHistory([{ role: "assistant", content: greeting, time }]);
         setState("speaking");
-        speakText(greeting, () => {
+        playSpeech(greeting, () => {
           if (isCallActiveRef.current) {
             setState("listening");
             resumeListening();
           }
         });
+      } else {
+        setState("listening");
       }
     } catch (err: any) {
       console.error("Mic access error:", err);
       setState("idle");
-      setErrorNotice("Tidak dapat mengakses mikrofon. Izinkan akses mikrofon di pengaturan browser Anda.");
+      setErrorNotice("Tidak dapat mengakses mikrofon. Izinkan akses mikrofon di browser Anda untuk memulai panggilan.");
     }
   };
 
   // End Call Handler
   const endCall = useCallback(() => {
     isCallActiveRef.current = false;
-    stopSpeaking();
+    stopAudio();
 
     if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
     if (timerRef.current) clearInterval(timerRef.current);
@@ -424,20 +515,33 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     setLiveTranscript("");
     setCurrentAiSpeech("");
     setAudioLevel(0);
-  }, [stopSpeaking]);
+    setIsPlayingAudio(false);
+  }, [stopAudio]);
 
-  // Clean up on component unmount
   useEffect(() => {
     return () => {
       endCall();
     };
   }, [endCall]);
 
-  // Manual interrupt: user clicks "Potong / Bicara"
+  // Interrupt AI
   const handleInterrupt = () => {
-    stopSpeaking();
+    stopAudio();
     setState("listening");
     resumeListening();
+  };
+
+  // Replay last AI speech
+  const handleReplay = () => {
+    if (!currentAiSpeech) return;
+    unlockAudioContextAndPlayer();
+    setState("speaking");
+    playSpeech(currentAiSpeech, () => {
+      if (isCallActiveRef.current) {
+        setState("listening");
+        resumeListening();
+      }
+    });
   };
 
   // Clear conversation history
@@ -479,7 +583,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
             </div>
             <p className="text-xs text-muted">
               {state === "idle"
-                ? "Panggilan suara langsung bebas topik"
+                ? "Panggilan suara langsung 1-on-1"
                 : `Panggilan berlangsung · ${fmtDuration(duration)}`}
             </p>
           </div>
@@ -543,18 +647,18 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
               <div
                 className="absolute rounded-full border border-accent/20 transition-all duration-300"
                 style={{
-                  width: `${160 + (state === "listening" ? audioLevel * 1.2 : 40)}px`,
-                  height: `${160 + (state === "listening" ? audioLevel * 1.2 : 40)}px`,
-                  opacity: state === "listening" ? 0.3 + audioLevel / 200 : 0.4,
-                  transform: `scale(${state === "speaking" ? 1.08 : 1})`,
+                  width: `${160 + (state === "listening" ? audioLevel * 1.2 : isPlayingAudio ? 50 : 20)}px`,
+                  height: `${160 + (state === "listening" ? audioLevel * 1.2 : isPlayingAudio ? 50 : 20)}px`,
+                  opacity: state === "listening" ? 0.3 + audioLevel / 200 : isPlayingAudio ? 0.5 : 0.25,
+                  transform: `scale(${isPlayingAudio ? 1.08 : 1})`,
                 }}
               />
               <div
                 className="absolute rounded-full border border-accent/10 transition-all duration-500"
                 style={{
-                  width: `${210 + (state === "listening" ? audioLevel * 1.8 : 70)}px`,
-                  height: `${210 + (state === "listening" ? audioLevel * 1.8 : 70)}px`,
-                  opacity: state === "listening" ? 0.2 + audioLevel / 300 : 0.25,
+                  width: `${210 + (state === "listening" ? audioLevel * 1.8 : isPlayingAudio ? 80 : 30)}px`,
+                  height: `${210 + (state === "listening" ? audioLevel * 1.8 : isPlayingAudio ? 80 : 30)}px`,
+                  opacity: state === "listening" ? 0.2 + audioLevel / 300 : isPlayingAudio ? 0.35 : 0.15,
                 }}
               />
             </>
@@ -571,12 +675,22 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
               <Phone size={44} className="relative z-10 transition-transform group-hover:rotate-12" />
             </button>
           ) : (
-            <div
-              className={`relative grid size-32 place-items-center rounded-full transition-all duration-500 ${
+            <button
+              onClick={() => {
+                if (state === "speaking") {
+                  handleInterrupt();
+                } else if (state === "listening") {
+                  // user can tap to force finish speech if recognition doesn't auto fire
+                  if (liveTranscript.trim()) submitQuestion(liveTranscript.trim());
+                }
+              }}
+              title={state === "speaking" ? "Ketuk untuk potong & bicara" : "Ketuk untuk bicara"}
+              aria-label={state === "speaking" ? "Ketuk untuk potong & bicara" : "Status panggilan"}
+              className={`relative grid size-32 place-items-center rounded-full transition-all duration-500 active:scale-95 ${
                 state === "listening"
-                  ? "bg-emerald-500/20 text-emerald-500 border-2 border-emerald-500/40 shadow-emerald-500/20 shadow-lg"
+                  ? "bg-emerald-500/20 text-emerald-500 border-2 border-emerald-500/40 shadow-emerald-500/20 shadow-lg cursor-pointer"
                   : state === "speaking"
-                  ? "bg-accent/20 text-accent border-2 border-accent/50 shadow-accent/20 shadow-lg"
+                  ? "bg-accent/20 text-accent border-2 border-accent/50 shadow-accent/20 shadow-lg cursor-pointer"
                   : state === "thinking"
                   ? "bg-violet-500/20 text-violet-400 border-2 border-violet-500/40 animate-pulse shadow-lg"
                   : "bg-card border border-line text-muted"
@@ -591,7 +705,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
               ) : (
                 <Radio size={40} />
               )}
-            </div>
+            </button>
           )}
         </div>
 
@@ -601,7 +715,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
             <>
               <h2 className="display text-2xl font-semibold">Mulai Percakapan Suara</h2>
               <p className="mt-1 text-sm text-muted">
-                Tekan tombol telepon di atas untuk berbicara langsung dengan Estaka Voice AI. Bebas tanya topik apapun.
+                Tekan tombol telepon di atas untuk berbicara langsung dengan Estaka Voice AI layaknya panggilan suara 1-on-1.
               </p>
             </>
           ) : state === "connecting" ? (
@@ -616,7 +730,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
                 Mendengarkan ucapan Anda…
               </div>
               <p className="mt-2 min-h-12 text-sm italic text-fg/90">
-                {liveTranscript || "Silakan berbicara sekarang, AI akan langsung merespons setelah jeda sejenak."}
+                {liveTranscript || "Silakan berbicara sekarang, AI akan langsung membalas dengan suara setelah jeda sejenak."}
               </p>
             </>
           ) : state === "thinking" ? (
@@ -625,7 +739,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
                 <span className="size-2 rounded-full bg-violet-400 animate-pulse" />
                 Estaka AI sedang berpikir…
               </div>
-              <p className="mt-2 text-sm text-muted">Merangkai jawaban terbaik untuk Anda…</p>
+              <p className="mt-2 text-sm text-muted">Merangkai jawaban suara untuk Anda…</p>
             </>
           ) : state === "speaking" ? (
             <>
@@ -636,12 +750,23 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
               <p className="mt-2 max-h-24 overflow-y-auto px-2 text-sm leading-relaxed text-fg/90 font-serif">
                 “{currentAiSpeech}”
               </p>
-              <button
-                onClick={handleInterrupt}
-                className="mt-3 inline-flex items-center gap-1 rounded-full border border-line bg-card px-3 py-1 text-xs text-muted hover:text-fg transition-transform active:scale-95"
-              >
-                <span>Potong pembicaraan & bicara</span>
-              </button>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  onClick={handleInterrupt}
+                  className="inline-flex items-center gap-1 rounded-full border border-line bg-card px-3 py-1 text-xs text-muted hover:text-fg transition-transform active:scale-95"
+                >
+                  <Mic size={13} />
+                  <span>Potong & Bicara</span>
+                </button>
+                <button
+                  onClick={handleReplay}
+                  title="Putar ulang suara AI"
+                  className="inline-flex items-center gap-1 rounded-full border border-line bg-card px-3 py-1 text-xs text-muted hover:text-fg transition-transform active:scale-95"
+                >
+                  <RefreshCw size={13} />
+                  <span>Dengar Ulang</span>
+                </button>
+              </div>
             </>
           ) : null}
         </div>
@@ -671,16 +796,22 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
             {/* Mute Mic Toggle */}
             <button
               onClick={() => {
-                setIsMuted((m) => !m);
-                if (!isMuted && state === "listening") {
-                  if (recognitionRef.current) {
+                setIsMuted((m) => {
+                  const next = !m;
+                  if (mediaStreamRef.current) {
+                    mediaStreamRef.current.getAudioTracks().forEach((track) => {
+                      track.enabled = !next;
+                    });
+                  }
+                  if (next && recognitionRef.current) {
                     try {
                       recognitionRef.current.abort();
                     } catch {}
+                  } else if (!next && state === "listening") {
+                    resumeListening();
                   }
-                } else if (isMuted && state === "listening") {
-                  resumeListening();
-                }
+                  return next;
+                });
               }}
               title={isMuted ? "Buka Mic" : "Bisu Mic (Mute)"}
               aria-label={isMuted ? "Buka Mic" : "Bisu Mic (Mute)"}
@@ -708,7 +839,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
               onClick={() => {
                 setIsAudioMuted((m) => {
                   const next = !m;
-                  if (next) stopSpeaking();
+                  if (next) stopAudio();
                   return next;
                 });
               }}
@@ -794,11 +925,13 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
         </section>
       )}
 
-      {/* Footer Info Notice */}
-      <footer className="mt-8 text-center text-xs text-muted">
+      {/* Mobile Tips Notice */}
+      <footer className="mt-6 space-y-1 text-center text-xs text-muted">
+        <p className="font-medium text-fg/80">
+          💡 Tips Pengguna Ponsel / iPhone:
+        </p>
         <p>
-          Fitur Telepon AI ditenagai oleh 9Router resmi Estaka. Suara dianalisis secara privat langsung di perangkat
-          Anda dan tidak disimpan ke basis data permanen.
+          Pastikan tuas hening (silent switch) di samping iPhone dalam posisi OFF dan volume dinaikkan agar suara AI terdengar jelas melalui speaker.
         </p>
       </footer>
     </div>
