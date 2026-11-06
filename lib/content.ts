@@ -4,26 +4,16 @@
  * Medical claims are intentionally conservative (no guarantees, no superlatives).
  * Use *word* to render an italic accent word.
  */
+import { getBaseUrl } from "@/lib/origin";
+
 export type Bi = { id: string; en: string };
 
 const env = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
 
-const resolveSiteUrl = () => {
-  const custom = env(process.env.NEXT_PUBLIC_SITE_URL);
-  if (custom) return custom.replace(/\/$/, "");
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`.replace(/\/$/, "");
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`.replace(/\/$/, "");
-  }
-  return "https://estakadentalclinic.vercel.app";
-};
-
 export const clinic = {
   name: "Estaka Dental Clinic",
   short: "Estaka",
-  siteUrl: resolveSiteUrl(),
+  siteUrl: getBaseUrl(),
   whatsapp: env(process.env.NEXT_PUBLIC_WA_NUMBER)?.replace(/\D/g, ""),
   phone: env(process.env.NEXT_PUBLIC_PHONE),
   address: env(process.env.NEXT_PUBLIC_ADDRESS) ?? "Jl. Andi Tonro Blok F No.30, Bongaya, Kec. Tamalate, Kota Makassar, Sulawesi Selatan 90131",

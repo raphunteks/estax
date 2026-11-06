@@ -86,9 +86,9 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="h-media-wrap relative mx-auto aspect-square w-full max-w-[320px] sm:max-w-[420px] lg:max-w-[520px]" aria-hidden="true">
+        <div className="h-media-wrap relative mx-auto aspect-square w-full min-h-[300px] max-w-[320px] sm:min-h-[400px] sm:max-w-[420px] lg:min-h-[500px] lg:max-w-[520px]" aria-hidden="true">
           <div className="hero-a h-media size-full">
-            <svg viewBox="0 0 600 600" className="size-full overflow-visible">
+            <svg viewBox="0 0 600 600" width="600" height="600" className="size-full overflow-visible">
               <defs>
                 <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
                   <feGaussianBlur stdDeviation="6" />

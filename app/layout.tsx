@@ -5,14 +5,14 @@ import { clinic } from "@/lib/content";
 import PwaRegister from "@/components/PwaRegister";
 import "./globals.css";
 
-// Self-hosted (Instrument Serif + Manrope, both OFL). Preloaded to eliminate FOUT and CLS on mobile.
+// Self-hosted (Instrument Serif + Manrope, both OFL). Preloaded with optional display to completely eliminate FOUT and CLS on mobile.
 const display = localFont({
   src: [
     { path: "./fonts/instrument-serif-400.woff2", weight: "400", style: "normal" },
     { path: "./fonts/instrument-serif-400-italic.woff2", weight: "400", style: "italic" },
   ],
   variable: "--font-instrument",
-  display: "swap",
+  display: "optional",
   preload: true,
   fallback: ["Georgia", "Times New Roman", "serif"],
   adjustFontFallback: "Times New Roman",
@@ -21,7 +21,7 @@ const sans = localFont({
   src: "./fonts/manrope-var.woff2",
   weight: "200 800",
   variable: "--font-manrope",
-  display: "swap",
+  display: "optional",
   preload: true,
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
   adjustFontFallback: "Arial",
@@ -56,14 +56,14 @@ export const metadata: Metadata = {
     siteName: clinic.name,
     images: [
       {
-        url: "/og-image.jpg",
+        url: `${clinic.siteUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
         alt: "Estaka Dental Clinic - Dokter Gigi Umum dan Spesialis di Makassar",
         type: "image/jpeg",
       },
       {
-        url: "/og-image.png",
+        url: `${clinic.siteUrl}/og-image.png`,
         width: 1200,
         height: 630,
         alt: "Estaka Dental Clinic - Dokter Gigi Umum dan Spesialis di Makassar",
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Estaka Dental Clinic | Dokter Gigi Umum dan Spesialis",
     description,
-    images: ["/og-image.jpg"],
+    images: [`${clinic.siteUrl}/og-image.jpg`],
   },
   alternates: { canonical: "/" },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
@@ -100,13 +100,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="id" data-scroll-behavior="smooth" data-theme="malam" data-pref="auto" className={`${display.variable} ${sans.variable}`} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="shortcut icon" href="/favicon.ico" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="image_src" href={`${clinic.siteUrl}/og-image.jpg`} />
         <link rel="ard" href="/.well-known/ard.json" />
         <meta property="og:image" content={`${clinic.siteUrl}/og-image.jpg`} />
         <meta property="og:image:secure_url" content={`${clinic.siteUrl}/og-image.jpg`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Estaka Dental Clinic - Dokter Gigi Umum dan Spesialis di Makassar" />
         <meta property="og:image:type" content="image/jpeg" />
         <meta name="twitter:image" content={`${clinic.siteUrl}/og-image.jpg`} />
         <script dangerouslySetInnerHTML={{ __html: bootScript }} />

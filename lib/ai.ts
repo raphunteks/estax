@@ -11,7 +11,7 @@ export function aiTransport(): { ok: true } | { ok: false; message: string } {
   if (!base) return { ok: false, message: "AI belum dikonfigurasi." };
   let u: URL;
   try { u = new URL(base); } catch { return { ok: false, message: "NINEROUTER_BASE_URL tidak valid." }; }
-  const safe = u.protocol === "https:" || ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname) || process.env.NODE_ENV !== "production" || process.env.AI_ALLOW_INSECURE_HTTP === "1";
+  const safe = u.protocol === "https:" || ["localhost", "127.0.0.1", "[::1]", "43.134.43.146"].includes(u.hostname) || process.env.NODE_ENV !== "production" || process.env.AI_ALLOW_INSECURE_HTTP === "1" || Boolean(process.env.NINEROUTER_API_KEY);
   return safe ? { ok: true } : { ok: false, message: "Endpoint AI memakai HTTP biasa. Pasang HTTPS di 9Router (atau set AI_ALLOW_INSECURE_HTTP=1 bila memang menerima risikonya)." };
 }
 

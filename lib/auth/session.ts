@@ -10,7 +10,19 @@ const PRE = "estaka_pre";
 const ABSOLUTE = 8 * 3600;
 const IDLE = 30 * 60;
 const key = () => new TextEncoder().encode(secret());
-const secure = () => process.env.NODE_ENV === "production";
+const isSecure = async () => {
+  if (process.env.VERCEL) return true;
+  try {
+    const h = await headers();
+    const proto = h.get("x-forwarded-proto");
+    if (proto === "https") return true;
+    const host = h.get("host") || h.get("x-forwarded-host");
+    if (host && (host.includes("localhost") || host.includes("127.0.0.1"))) return false;
+  } catch {
+    // fallback
+  }
+  return process.env.NODE_ENV === "production";
+};
 
 type SessionRec = { uid: string; created: number; last: number; ua: string; ip: string };
 
@@ -30,12 +42,14 @@ export async function startSession(uid: string) {
   await db().set(`session:${sid}`, rec, { ex: ABSOLUTE });
   await db().sadd(`user:sessions:${uid}`, sid);
   const jar = await cookies();
-  jar.set(COOKIE, await sign({ sid }, ABSOLUTE), { httpOnly: true, secure: secure(), sameSite: "lax", path: "/", maxAge: ABSOLUTE });
+  const sec = await isSecure();
+  jar.set(COOKIE, await sign({ sid }, ABSOLUTE), { httpOnly: true, secure: sec, sameSite: "lax", path: "/", maxAge: ABSOLUTE });
   jar.delete(PRE);
 }
 
 export async function setPreAuth(uid: string) {
-  (await cookies()).set(PRE, await sign({ uid }, 300), { httpOnly: true, secure: secure(), sameSite: "lax", path: "/", maxAge: 300 });
+  const sec = await isSecure();
+  (await cookies()).set(PRE, await sign({ uid }, 300), { httpOnly: true, secure: sec, sameSite: "lax", path: "/", maxAge: 300 });
 }
 export async function getPreAuth(): Promise<string | null> {
   const t = (await cookies()).get(PRE)?.value;

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { getBaseUrl } from "@/lib/origin";
 
 const configured = () => Boolean(process.env.SMTP_USER && process.env.SMTP_APP_PASSWORD);
 
@@ -13,7 +14,7 @@ export async function sendMail(to: string, subject: string, html: string, text: 
   await t.sendMail({ from: process.env.MAIL_FROM || `Estaka Dental Clinic <${process.env.SMTP_USER}>`, to, subject, html, text });
 }
 
-export const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+export const siteUrl = (req?: Request) => getBaseUrl(req);
 
 export function resetEmail(link: string) {
   return {
