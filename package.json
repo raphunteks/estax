@@ -2,12 +2,13 @@
   "name": "estaka-dental",
   "version": "1.0.0",
   "description": "",
+  "packageManager": "pnpm@10.34.9",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "next dev",
     "gen:agent": "tsx --tsconfig tsconfig.json scripts/gen-agent.ts",
-    "build": "npm run gen:agent && next build",
+    "build": "tsx --tsconfig tsconfig.json scripts/gen-agent.ts && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -37,6 +38,7 @@
     "react-google-recaptcha": "^3.1.0",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
     "web-push": "^3.6.7",
     "zod": "^4.6.7"
   },
