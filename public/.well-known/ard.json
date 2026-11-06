@@ -1,0 +1,21 @@
+{
+  "specVersion": "0.91",
+  "entries": [
+    {
+      "identifier": "urn:air:localhost:estaka:clinic-skill",
+      "displayName": "Estaka Dental Clinic: informasi dan janji temu",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
+      "url": "http://localhost:3000/.well-known/agent-skills/estaka/SKILL.md",
+      "description": "Jam praktik, dokter, layanan dan cara membuat janji di klinik gigi.",
+      "capabilities": [
+        "clinic-info",
+        "appointment-booking"
+      ],
+      "representativeQueries": [
+        "Jam buka klinik gigi Estaka",
+        "Cara membuat janji dokter gigi di Estaka",
+        "Dokter gigi spesialis konservasi di Makassar"
+      ]
+    }
+  ]
+}

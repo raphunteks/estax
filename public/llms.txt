@@ -1,0 +1,32 @@
+# Estaka Dental Clinic
+
+> Klinik gigi dengan dokter gigi umum dan spesialis konservasi gigi. Pasien dapat membuat janji online, dan biaya akhir ditentukan setelah pemeriksaan.
+
+## Halaman
+- [Beranda](http://localhost:3000/): profil klinik, dokter, layanan, biaya dan FAQ
+- [Buat janji](http://localhost:3000/#booking): formulir janji temu
+- [Masuk pasien dan staf](http://localhost:3000/masuk)
+- [Daftar pasien baru](http://localhost:3000/daftar)
+
+## Jam praktik (WITA)
+- Senin – Sabtu: 09:00 – 17:00
+- Minggu: Tutup
+
+## Dokter
+- drg. Hj. Kurniawaty, Sp.KG: Dokter Gigi Spesialis Konservasi
+- drg. Tasya Awaliyah Arsyad: Dokter Gigi Umum
+- drg. M. Aksa Arsyad: Dokter Gigi Umum
+
+## Layanan
+- Dokter Gigi Umum: Pemeriksaan, pembersihan karang gigi, tambal, dan perawatan dasar untuk seluruh keluarga.
+- Konservasi Gigi: Perawatan untuk mempertahankan gigi asli, seperti tambalan dan perawatan saluran akar, oleh dokter spesialis.
+- Konsultasi dan pemeriksaan
+- Pembersihan karang gigi
+- Tambal gigi
+- Perawatan saluran akar
+
+## Kontak
+- Alamat: Jl. Andi Tonro Blok F No.30, Bongaya, Kec. Tamalate, Kota Makassar, Sulawesi Selatan 90131
+
+## Optional
+- [Agent skill](http://localhost:3000/.well-known/agent-skills/estaka/SKILL.md)
