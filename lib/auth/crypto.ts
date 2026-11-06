@@ -6,7 +6,12 @@ export function secret(): string {
   if (process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET (>= 32 chars) is required in production");
   return "dev-only-secret-change-me-dev-only-secret";
 }
-const key = () => crypto.createHash("sha256").update(process.env.ENCRYPTION_KEY || secret()).digest();
+const primaryKeySecret = () => {
+  const s = process.env.AUTH_SECRET;
+  if (s && s.length >= 32) return s;
+  return process.env.ENCRYPTION_KEY || secret();
+};
+const key = () => crypto.createHash("sha256").update(primaryKeySecret()).digest();
 
 /** AES-256-GCM. Output: iv.tag.ciphertext (base64url). */
 export function encrypt(plain: string): string {
@@ -28,11 +33,20 @@ export function decrypt(blob: string): string {
   const [iv, tag, ct] = parts.map((p) => Buffer.from(p, "base64url"));
   if (!iv || !tag || !ct) return "";
 
-  // Candidates: ENCRYPTION_KEY, AUTH_SECRET, and dev fallback
+  // Candidates: primary secret (AUTH_SECRET), ENCRYPTION_KEY, and dev fallback
   const candidates: string[] = [];
-  if (process.env.ENCRYPTION_KEY?.trim()) candidates.push(process.env.ENCRYPTION_KEY.trim());
-  const s = process.env.AUTH_SECRET?.trim();
-  if (s && !candidates.includes(s)) candidates.push(s);
+  try {
+    const s = secret();
+    if (s) candidates.push(s);
+  } catch {
+    // fallback
+  }
+  if (process.env.AUTH_SECRET?.trim() && !candidates.includes(process.env.AUTH_SECRET.trim())) {
+    candidates.push(process.env.AUTH_SECRET.trim());
+  }
+  if (process.env.ENCRYPTION_KEY?.trim() && !candidates.includes(process.env.ENCRYPTION_KEY.trim())) {
+    candidates.push(process.env.ENCRYPTION_KEY.trim());
+  }
   const devFallback = "dev-only-secret-change-me-dev-only-secret";
   if (!candidates.includes(devFallback)) candidates.push(devFallback);
 

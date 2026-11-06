@@ -11,13 +11,13 @@ export async function newSetup(email: string) {
   return { secret, enc: encrypt(secret), qr: await QRCode.toDataURL(uri, { margin: 1, width: 220 }) };
 }
 
-/** Verifies a 6-digit code (±60s tolerance for mobile clock drifts) and blocks replay of an already-used step. Returns the new step or null. */
+/** Verifies a 6-digit code (±90s tolerance for mobile clock drifts) and blocks replay of an already-used step. Returns the new step or null. */
 export async function checkTotp(user: User, code: string): Promise<number | null> {
   if (!user.totpSecretEnc || !/^\d{6}$/.test(code)) return null;
   try {
     const plain = decrypt(user.totpSecretEnc);
     if (!plain) return null;
-    const r = await verify({ secret: plain, token: code, epochTolerance: 60 });
+    const r = await verify({ secret: plain, token: code, epochTolerance: 90 });
     if (!r.valid) return null;
     const step = (r as { timeStep?: number }).timeStep ?? Math.floor(Date.now() / 30000);
     return step !== user.lastTotpStep ? step : null;
