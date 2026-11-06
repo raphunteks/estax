@@ -17,7 +17,12 @@ function Swatch({ a, b }: { a: string; b: string }) {
 }
 
 /** Palette picker: "Ikut Jam" (WITA schedule) plus five palettes. Keyboard: arrows, Home/End, Esc. */
-export default function ThemeMenu({ align = "right", up = false }: { align?: "left" | "right"; up?: boolean }) {
+const SHEET = {
+  md: "fixed inset-x-4 top-[4.25rem] md:absolute md:inset-x-auto md:top-full md:mt-2 md:w-80",
+  lg: "fixed inset-x-4 top-[4.25rem] lg:absolute lg:inset-x-auto lg:top-full lg:mt-2 lg:w-80",
+} as const;
+/** `sheet`: below this breakpoint the panel is a full-width sheet under the header (prevents off-screen overflow when the button sits mid-header). */
+export default function ThemeMenu({ align = "right", up = false, sheet }: { align?: "left" | "right"; up?: boolean; sheet?: "md" | "lg" }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const current = useSyncExternalStore(subscribe, pref, () => "auto" as ThemePref);
@@ -69,15 +74,20 @@ export default function ThemeMenu({ align = "right", up = false }: { align?: "le
         aria-expanded={open}
         aria-label="Pilih tema warna"
         onClick={() => setOpen((o) => !o)}
-        className="grid size-11 place-items-center rounded-full border border-line transition-transform active:scale-95"
+        className="grid size-10 place-items-center rounded-full border border-line bg-card/60 transition-[transform,background-color] hover:bg-card active:scale-95"
       >
-        <span aria-hidden="true" className="block size-6 rounded-full border border-line" style={{ background: `linear-gradient(135deg, ${sw[0]} 50%, ${sw[1]} 50%)` }} />
+        <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill={sw[1]} />
+          <path d="M5.64 18.36A9 9 0 0 1 18.36 5.64Z" fill={sw[0]} />
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeOpacity=".28" strokeWidth="1" />
+          <circle cx="12" cy="12" r="3" fill="var(--bg)" stroke="currentColor" strokeOpacity=".28" strokeWidth="1" />
+        </svg>
       </button>
       <div
         role="menu"
         aria-label="Tema warna"
         hidden={!open}
-        className={`material absolute z-[70] w-[min(88vw,20rem)] rounded-3xl border border-line p-2 shadow-2xl ${align === "right" ? "right-0" : "left-0"} ${up ? "bottom-full mb-2" : "top-full mt-2"}`}
+        className={`material z-[70] rounded-3xl border border-line bg-bg p-2 shadow-2xl ${sheet ? `${SHEET[sheet]} ${align === "right" ? (sheet === "lg" ? "lg:right-0" : "md:right-0") : (sheet === "lg" ? "lg:left-0" : "md:left-0")}` : `absolute w-[min(88vw,20rem)] ${align === "right" ? "right-0" : "left-0"} ${up ? "bottom-full mb-2" : "top-full mt-2"}`}`}
       >
         {options.map((o) => {
           const on = current === o.key;

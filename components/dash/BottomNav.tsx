@@ -113,13 +113,14 @@ export default function BottomNav({ role, locked, items, icons }: { role: string
   const badge = (h: string) => data?.badges[h] ?? data?.badges[base(h)] ?? 0;
   const pr = data?.primary;
   const centerOk = cfg.center.kind === "exam" ? allowed("/dashboard/periksa") : cfg.center.kind === "rx" ? allowed("/dashboard/farmasi") : cfg.center.kind === "sheet-checkin" ? allowed("/dashboard/janji") : allowed("/dashboard/pasien");
-  const centerDisabled = locked || !centerOk || busy || (cfg.center.kind === "exam" && pr?.kind !== "exam") || (cfg.center.kind === "rx" && pr?.kind !== "rx");
-  const centerHint = cfg.center.kind === "exam" && pr?.kind !== "exam" ? "Belum ada pasien check-in" : cfg.center.kind === "rx" && pr?.kind !== "rx" ? "Belum ada resep menunggu" : "";
+  const centerDisabled = locked || !centerOk || busy || (cfg.center.kind === "rx" && pr?.kind !== "rx");
+  const centerHint = cfg.center.kind === "exam" && pr?.kind !== "exam" ? "Belum ada pasien check-in, buka daftar pemeriksaan" : cfg.center.kind === "rx" && pr?.kind !== "rx" ? "Belum ada resep menunggu" : "";
 
   async function centerAction() {
     setNote("");
     if (cfg.center.kind === "sheet-checkin") return setSheet("checkin");
     if (cfg.center.kind === "sheet-search") return setSheet("search");
+    if (cfg.center.kind === "exam" && pr?.kind !== "exam") return router.push("/dashboard/periksa");
     setBusy(true);
     try {
       if (pr?.kind === "exam") {

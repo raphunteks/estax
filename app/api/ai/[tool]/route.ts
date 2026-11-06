@@ -2,7 +2,7 @@ import { z } from "zod";
 import { fail, isResponse, json, requireAuth } from "@/lib/api";
 import { audit, rateLimit } from "@/lib/auth/guards";
 import { AiError, aiReady, aiTransport } from "@/lib/ai";
-import { TOOLS, aftercare, answerFaq, answerReport, patientContext, soapFromText, summarize, tidyNote, waReply, type Tool } from "@/lib/clinic/ai-tools";
+import { TOOLS, aftercare, answerFaq, answerReport, patientContext, soapFromText, summarize, tidyNote, waReply, type FaqTurn, type Tool } from "@/lib/clinic/ai-tools";
 import { analytics } from "@/lib/clinic/analytics";
 import { getPatient } from "@/lib/clinic/patients";
 import { getVisit } from "@/lib/clinic/visits";
@@ -15,7 +15,7 @@ const body = {
   summary: z.object({ patientId: z.string().max(40), reason: z.string().trim().max(200).optional() }),
   wa: z.object({ message: text(1000) }),
   report: z.object({ question: text(400), days: z.union([z.literal(7), z.literal(30), z.literal(90)]).default(30) }),
-  faq: z.object({ question: text(500) }),
+  faq: z.object({ question: text(500), history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().trim().max(800) })).max(8).default([]) }),
   edu: z.object({ visitId: z.string().max(40), reason: z.string().trim().max(200).optional() }),
 } as const;
 
@@ -41,7 +41,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tool: s
   if (!aiReady) return fail("ai_not_configured", 503, ERR.ai_not_configured[1]);
   const tr = aiTransport();
   if (!tr.ok) return fail("insecure_transport", 503, tr.message);
-  if (!(await rateLimit("ai", a.user.id, tool === "faq" ? 15 : 40, 3600))) return fail("rate_limited", 429, "Terlalu banyak permintaan AI. Coba lagi nanti.");
+  if (!(await rateLimit("ai", a.user.id, tool === "faq" ? 40 : 40, 3600))) return fail("rate_limited", 429, "Terlalu banyak permintaan AI. Coba lagi nanti.");
   const d = p.data as Record<string, unknown>;
   try {
     const names = async () => { const pt = d.patientId ? await getPatient(String(d.patientId)) : null; return pt ? [pt.name] : []; };
@@ -65,7 +65,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ tool: s
       result = { text: await summarize(await patientContext(pt)) };
     } else if (tool === "wa") result = { text: await waReply(String(d.message)) };
     else if (tool === "report") result = { text: await answerReport(String(d.question), await analytics({ id: a.user.id, role: a.user.role }, Number(d.days))) };
-    else result = { text: await answerFaq(String(d.question)) };
+    else {
+      const text = await answerFaq(String(d.question), d.history as FaqTurn[]);
+      if (!text) return fail("ai_empty", 502, "Asisten belum bisa menjawab. Coba tanyakan dengan kalimat lain.");
+      result = { text };
+    }
     await audit(`ai.${tool}`, a.user.id, { chars: JSON.stringify(d).length });
     return json({ ok: true, draft: true, ...(result as object) });
   } catch (e) {

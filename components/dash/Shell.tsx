@@ -156,7 +156,7 @@ export default function Shell({ items, user, locked, children }: { items: SideIt
         <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-line bg-bg/80 px-4 backdrop-blur-xl sm:px-6">
           <Link href="/dashboard" aria-label="Estaka, ke Beranda" className="flex items-center gap-2 lg:hidden"><Logo size={34} className="shrink-0" /><span className="display text-xl">Estaka</span></Link>
           <p className="ml-auto hidden text-sm text-muted lg:order-2 lg:block">{user.email}</p>
-          <span className="lg:order-3"><ThemeMenu /></span>
+          <span className="lg:order-3"><ThemeMenu sheet="lg" align="right" /></span>
           <button onClick={logout} className="ml-auto inline-flex min-h-10 lg:order-4 lg:ml-0 items-center gap-2 rounded-xl border border-line px-3 text-sm text-muted transition-[transform,color] hover:text-fg active:scale-[0.97]">
             <LogOut size={16} /> Keluar
           </button>

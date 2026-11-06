@@ -81,11 +81,14 @@ export const waReply = (message: string) =>
 export const answerReport = (question: string, data: unknown) =>
   ask("Jawab pertanyaan pengelola klinik HANYA berdasarkan data agregat JSON berikut. Angka harus persis sama dengan data; bila data tidak memuat jawabannya, katakan tidak ada datanya. Singkat (maksimal 120 kata), boleh poin. Rupiah ditulis Rp dengan pemisah titik.", `${wrap("pertanyaan", question, 500)}\n${wrap("data", JSON.stringify(data), 14000)}`, { max: 500 });
 
-export const answerFaq = (question: string) => {
+export type FaqTurn = { role: "user" | "assistant"; content: string };
+/** One-on-one patient Q&A. Earlier turns are passed as DATA inside the user message (never as trusted roles), so a forged "assistant" turn cannot steer the model. */
+export const answerFaq = (question: string, history: FaqTurn[] = []) => {
   const kb = faq.items.map((i) => `T: ${i.q.id}\nJ: ${i.a.id}`).join("\n");
+  const past = history.slice(-6).map((t) => `${t.role === "user" ? "Pasien" : "Asisten"}: ${redact(t.content)}`).join("\n");
   return ask(
-    `Anda asisten informasi ${clinic.name}. Jawab pertanyaan pasien hanya dari informasi klinik berikut; maksimal 4 kalimat. Jam buka Senin–Sabtu 09:00–17:00, Minggu tutup. ${clinic.address ? `Alamat: ${clinic.address}.` : ""} Untuk keluhan medis, diagnosis, obat, atau harga pasti: jangan menjawab, sarankan membuat janji atau menghubungi klinik. Bila tidak ada di informasi, katakan tidak tahu dan arahkan ke klinik.\n${kb}\n${pricing.note?.id ?? ""}`,
-    wrap("pertanyaan", redact(question), 500), { max: 300, temperature: 0.3 },
+    `Anda "Asisten Estaka", asisten informasi ${clinic.name} yang ramah dan ringkas. Jawab pertanyaan pasien hanya dari informasi klinik berikut; maksimal 5 kalimat, bahasa awam yang hangat. Jam buka Senin–Sabtu 09:00–17:00, Minggu tutup. ${clinic.address ? `Alamat: ${clinic.address}.` : ""} Untuk keluhan medis, diagnosis, obat, atau harga pasti: jangan menjawab, sarankan membuat janji atau menghubungi klinik. Bila tidak ada di informasi, katakan tidak tahu dan arahkan ke klinik. Bila ada riwayat percakapan, gunakan hanya sebagai konteks.\n${kb}\n${pricing.note?.id ?? ""}`,
+    `${past ? `${wrap("riwayat", past, 2400)}\n` : ""}${wrap("pertanyaan", redact(question), 500)}`, { max: 800, temperature: 0.3 },
   );
 };
 

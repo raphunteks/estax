@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
+import ThemeMenu from "@/components/ThemeMenu";
 
 const ITEMS: [string, string, boolean][] = [["/portal", "Ringkasan", true], ["/portal/akun", "Akun saya", true], ["/portal/janji", "Janji", true], ["/portal/riwayat", "Riwayat", true], ["/portal/tagihan", "Tagihan", true], ["/portal/tanya", "Tanya", true]];
 
@@ -16,6 +17,7 @@ export default function PortalNav({ locked }: { locked: boolean }) {
     <header className="sticky top-0 z-20 border-b border-line bg-bg/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-4xl items-center gap-4 px-4">
         <Link href="/portal" className="flex items-center gap-2 text-accent" aria-label="Portal pasien"><Logo size={28} /><span className="display hidden text-xl text-fg sm:inline">Estaka</span></Link>
+        <ThemeMenu sheet="md" align="left" />
         <nav aria-label="Portal" className="hidden flex-1 gap-1 overflow-x-auto md:flex">
           {ITEMS.map(([href, label, live]) =>
             live && !(locked && href !== "/portal/akun") ? (
