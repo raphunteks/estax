@@ -218,9 +218,9 @@ function Profile(p: Props) {
         <div>
           <label className="btn btn-ghost cursor-pointer">
             Ganti foto
-            <input name="account-input-219" type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={upload} />
+            <input name="account-input-219" type="file" accept="image/*,.heic,.heif,.svg,.png,.jpg,.jpeg,.webp" className="sr-only" onChange={upload} />
           </label>
-          <p className="mt-2 text-xs text-muted">JPG, PNG, atau WebP, maksimal 3 MB. Lokasi (EXIF) dihapus otomatis.</p>
+          <p className="mt-2 text-xs text-muted">PNG, JPG, HEIC, WebP, atau SVG (maksimal 10 MB). Lokasi (EXIF) dihapus otomatis.</p>
         </div>
       </div>
       <form onSubmit={saveName} className="mt-5 grid max-w-xl gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
