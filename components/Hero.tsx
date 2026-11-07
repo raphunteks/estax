@@ -1,17 +1,36 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useLazyGsap } from "@/lib/use-gsap-lazy";
+import { roomCapable } from "@/lib/room-capable";
 import { L } from "./L";
 import { hero } from "@/lib/content";
 
 const TOOTH =
   "M300 120C250 100 190 130 190 200C190 260 210 300 220 360C228 410 245 470 270 470C290 470 285 400 300 400C315 400 310 470 330 470C355 470 372 410 380 360C390 300 410 260 410 200C410 130 350 100 300 120Z";
 
+// The 3D clinic is a separate chunk: it is fetched only on capable devices, after the headline has painted.
+const HeroRoom = dynamic(() => import("./hero3d/HeroRoom"), { ssr: false });
+
 export default function Hero() {
   const root = useRef<HTMLElement>(null);
+  const wantsRoom = useRef(false);
+  const [room, setRoom] = useState(false);
+
+  useEffect(() => {
+    // Decide once on mount; a visitor who is already scrolling keeps the static hero (no late pin jump).
+    if (!roomCapable() || window.scrollY > 40) return;
+    wantsRoom.current = true;
+    const go = () => setRoom(true);
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 1500 });
+    else setTimeout(go, 600);
+  }, []);
 
   useLazyGsap(root, ({ gsap, MOTION_OK, FINE_POINTER }) => {
+    // The 3D room owns the hero's scroll choreography; the static parallax only runs without it.
+    if (wantsRoom.current) return;
     {
       const mm = gsap.matchMedia();
 
@@ -58,8 +77,9 @@ export default function Hero() {
   });
 
   return (
-    <section id="top" ref={root} className="relative flex min-h-dvh items-center overflow-hidden pt-[72px]">
-      <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+    <section id="top" ref={root} data-room={room ? "on" : undefined} className="group relative flex min-h-dvh items-center overflow-hidden pt-[72px] data-[room=on]:h-dvh data-[room=on]:items-start data-[room=on]:pt-24 lg:data-[room=on]:items-center lg:data-[room=on]:pt-[72px]">
+      {room && <HeroRoom section={root} />}
+      <div className="pointer-events-none absolute inset-0 -z-10 group-data-[room=on]:hidden" aria-hidden="true">
         <div className="h-glow glow-pulse absolute -right-32 top-1/4 size-[640px] rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, var(--glow), transparent)" }} />
         <div className="absolute inset-0" style={{ background: "radial-gradient(1200px 600px at 20% 0%, var(--surface2), transparent 70%)" }} />
         <div className="grain absolute inset-0" />
@@ -86,7 +106,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="h-media-wrap relative mx-auto aspect-square w-full min-h-[300px] max-w-[320px] sm:min-h-[400px] sm:max-w-[420px] lg:min-h-[500px] lg:max-w-[520px]" aria-hidden="true">
+        <div className="h-media-wrap relative mx-auto group-data-[room=on]:hidden aspect-square w-full min-h-[300px] max-w-[320px] sm:min-h-[400px] sm:max-w-[420px] lg:min-h-[500px] lg:max-w-[520px]" aria-hidden="true">
           <div className="hero-a h-media size-full">
             <svg viewBox="0 0 600 600" width="600" height="600" className="size-full overflow-visible">
               <defs>
