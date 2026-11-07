@@ -1,5 +1,20 @@
 "use client";
 
+// Silence Three.js r183+ deprecation warning for THREE.Clock used internally by @react-three/fiber
+if (typeof window !== "undefined" && !(window as any).__THREE_CLOCK_SILENCED__) {
+  (window as any).__THREE_CLOCK_SILENCED__ = true;
+  const origWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    if (
+      typeof args[0] === "string" &&
+      args[0].includes("Clock: This module has been deprecated")
+    ) {
+      return;
+    }
+    origWarn.apply(console, args);
+  };
+}
+
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
