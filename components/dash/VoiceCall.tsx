@@ -67,6 +67,9 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   const isSubmittingRef = useRef(false);
   const lastSubmittedTextRef = useRef("");
   const lastSubmitTimeRef = useRef(0);
+  const callStateRef = useRef<CallState>("idle");
+  const historyRef = useRef<Turn[]>([]);
+  const submitQuestionRef = useRef<(text: string) => Promise<void>>(async () => {});
 
   // Synchronize mutable refs
   useEffect(() => {
@@ -75,12 +78,34 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   useEffect(() => {
     isAudioMutedRef.current = isAudioMuted;
   }, [isAudioMuted]);
+  useEffect(() => {
+    callStateRef.current = state;
+  }, [state]);
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
 
   // Load cached history and preload voices
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) setHistory(JSON.parse(saved));
+      if (saved) {
+        const parsed: Turn[] = JSON.parse(saved);
+        // Clean any historical duplicate artifacts
+        const cleaned: Turn[] = [];
+        for (const item of parsed) {
+          const prev = cleaned[cleaned.length - 1];
+          if (
+            prev &&
+            prev.role === item.role &&
+            prev.content.trim().toLowerCase() === item.content.trim().toLowerCase()
+          ) {
+            continue;
+          }
+          cleaned.push(item);
+        }
+        setHistory(cleaned);
+      }
     } catch {}
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -160,6 +185,8 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
         return;
       }
 
+      callStateRef.current = "speaking";
+      setState("speaking");
       stopAudio();
       setIsPlayingAudio(true);
       setCurrentAiSpeech(text);
@@ -239,13 +266,21 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
     if (isMutedRef.current) return;
 
+    callStateRef.current = "listening";
+    setState("listening");
+    setLiveTranscript("");
+
     try {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
         } catch {}
         setTimeout(() => {
-          if (isCallActiveRef.current && !isMutedRef.current) {
+          if (
+            isCallActiveRef.current &&
+            !isMutedRef.current &&
+            callStateRef.current === "listening"
+          ) {
             try {
               recognitionRef.current.start();
             } catch {}
@@ -261,13 +296,31 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       const q = text.trim();
       if (!q || !isCallActiveRef.current) return;
 
-      // Deduplication Guard: prevent double trigger / concurrent submissions
       const now = Date.now();
-      if (isSubmittingRef.current) return;
+      // Guard 1: Mutex lock if currently submitting or in thinking/speaking state
+      if (
+        isSubmittingRef.current ||
+        callStateRef.current === "thinking" ||
+        callStateRef.current === "speaking"
+      ) {
+        return;
+      }
+
+      // Guard 2: Deduplication by text and time (cooldown 4000ms for identical text)
       if (
         lastSubmittedTextRef.current &&
         q.toLowerCase() === lastSubmittedTextRef.current.toLowerCase() &&
-        now - lastSubmitTimeRef.current < 3500
+        now - lastSubmitTimeRef.current < 4000
+      ) {
+        return;
+      }
+
+      // Guard 3: Functional check against latest turn in historyRef
+      const lastTurn = historyRef.current[historyRef.current.length - 1];
+      if (
+        lastTurn &&
+        lastTurn.role === "user" &&
+        lastTurn.content.trim().toLowerCase() === q.toLowerCase()
       ) {
         return;
       }
@@ -291,17 +344,26 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       }
 
       stopAudio();
+      callStateRef.current = "thinking";
       setState("thinking");
       setErrorNotice(null);
 
       const time = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-      const currentHistory = [...history];
 
-      // Add user turn once
-      setHistory((prev) => [...prev, { role: "user", content: q, time }]);
+      // Add user turn defensively with duplicate prevention
+      setHistory((prev) => {
+        const last = prev[prev.length - 1];
+        if (last && last.role === "user" && last.content.trim().toLowerCase() === q.toLowerCase()) {
+          return prev;
+        }
+        return [...prev, { role: "user", content: q, time }];
+      });
 
-      // Send to 9Router Voice AI tool
-      const payloadHistory = currentHistory.slice(-8).map((h) => ({ role: h.role, content: h.content }));
+      // Send to 9Router Voice AI tool using historyRef.current
+      const payloadHistory = historyRef.current
+        .slice(-8)
+        .map((h) => ({ role: h.role, content: h.content }));
+
       const res = await api<{ text: string }>("/api/ai/voice", "POST", {
         question: q,
         history: payloadHistory,
@@ -314,6 +376,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
       if (!res.ok || !res.text) {
         setErrorNotice(res.message || "Gagal mendapatkan balasan dari AI. Silakan coba lagi.");
+        callStateRef.current = "listening";
         setState("listening");
         isSubmittingRef.current = false;
         resumeListening();
@@ -324,17 +387,24 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       const aiTime = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
       setHistory((prev) => [...prev, { role: "assistant", content: answer, time: aiTime }]);
 
+      callStateRef.current = "speaking";
       setState("speaking");
       playSpeech(answer, () => {
         isSubmittingRef.current = false;
         if (isCallActiveRef.current) {
+          callStateRef.current = "listening";
           setState("listening");
           resumeListening();
         }
       });
     },
-    [history, playSpeech, resumeListening, stopAudio]
+    [playSpeech, resumeListening, stopAudio]
   );
+
+  // Sync ref to prevent stale closures
+  useEffect(() => {
+    submitQuestionRef.current = submitQuestion;
+  }, [submitQuestion]);
 
   // Setup Web Speech Recognition API
   const setupSpeechRecognition = useCallback(() => {
@@ -352,19 +422,28 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     rec.maxAlternatives = 1;
 
     rec.onstart = () => {
-      if (isCallActiveRef.current && state !== "thinking" && state !== "speaking") {
+      if (
+        isCallActiveRef.current &&
+        callStateRef.current !== "thinking" &&
+        callStateRef.current !== "speaking"
+      ) {
+        callStateRef.current = "listening";
         setState("listening");
       }
     };
 
     rec.onresult = (event: any) => {
       if (!isCallActiveRef.current || isMutedRef.current) return;
-      if (isSubmittingRef.current || state === "thinking") return;
 
       // If user starts speaking while AI is speaking, interrupt immediately!
-      if (isCallActiveRef.current && state === "speaking") {
+      if (callStateRef.current === "speaking") {
         stopAudio();
+        callStateRef.current = "listening";
         setState("listening");
+      }
+
+      if (isSubmittingRef.current || callStateRef.current === "thinking") {
+        return;
       }
 
       let interim = "";
@@ -387,14 +466,19 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       setLiveTranscript(currentSpeech);
 
       // Smart End-of-Speech Detection:
-      // If user finished a sentence (isFinal): wait 850ms silence.
-      // If still forming words (interim): wait 1400ms so user isn't cut off mid-thought.
+      // If user finished a sentence (isFinal): wait 750ms silence.
+      // If still forming words (interim): wait 1350ms so user isn't cut off mid-thought.
       if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
-      const delay = hasFinal ? 850 : 1400;
+      const delay = hasFinal ? 750 : 1350;
 
       silenceTimeoutRef.current = setTimeout(() => {
-        if (isCallActiveRef.current && !isSubmittingRef.current && currentSpeech.length > 1) {
-          submitQuestion(currentSpeech);
+        if (
+          isCallActiveRef.current &&
+          !isSubmittingRef.current &&
+          callStateRef.current === "listening" &&
+          currentSpeech.length > 1
+        ) {
+          submitQuestionRef.current(currentSpeech);
         }
       }, delay);
     };
@@ -405,7 +489,12 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     };
 
     rec.onend = () => {
-      if (isCallActiveRef.current && !isMutedRef.current && state === "listening") {
+      if (
+        isCallActiveRef.current &&
+        !isMutedRef.current &&
+        callStateRef.current === "listening" &&
+        !isSubmittingRef.current
+      ) {
         try {
           rec.start();
         } catch {}
@@ -413,7 +502,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     };
 
     return rec;
-  }, [state, stopAudio, submitQuestion]);
+  }, [stopAudio]);
 
   // Unlock Audio on user gesture (Essential for iOS Safari / Mobile PWA)
   const unlockAudioContextAndPlayer = useCallback(() => {
@@ -421,13 +510,10 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
     // 1. Prime HTML5 Audio player
     try {
-      let player = audioPlayerRef.current;
-      if (!player) {
-        player = new Audio();
-        audioPlayerRef.current = player;
-      }
-      player.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-      player.play().catch(() => {});
+      const primerAudio = new Audio(
+        "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"
+      );
+      primerAudio.play().catch(() => {});
     } catch {}
 
     // 2. Prime Web Speech API
@@ -445,7 +531,9 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
   // Start Call Handler
   const startCall = async () => {
+    if (isCallActiveRef.current) return;
     setErrorNotice(null);
+    callStateRef.current = "connecting";
     setState("connecting");
     setDuration(0);
 
@@ -505,23 +593,27 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       }
 
       // First-time greeting with audio
-      if (history.length === 0) {
+      if (historyRef.current.length === 0) {
         const greeting =
           "Halo! Saya Estaka Voice AI. Silakan tanyakan apa saja seputar klinik atau obrolan santai, saya siap mendengarkan.";
         const time = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
         setHistory([{ role: "assistant", content: greeting, time }]);
+        callStateRef.current = "speaking";
         setState("speaking");
         playSpeech(greeting, () => {
           if (isCallActiveRef.current) {
+            callStateRef.current = "listening";
             setState("listening");
             resumeListening();
           }
         });
       } else {
+        callStateRef.current = "listening";
         setState("listening");
       }
     } catch (err: any) {
       console.error("Mic access error:", err);
+      callStateRef.current = "idle";
       setState("idle");
       setErrorNotice("Tidak dapat mengakses mikrofon. Izinkan akses mikrofon di browser Anda untuk memulai panggilan.");
     }
@@ -531,6 +623,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   const endCall = useCallback(() => {
     isCallActiveRef.current = false;
     isSubmittingRef.current = false;
+    callStateRef.current = "idle";
     stopAudio();
 
     if (silenceTimeoutRef.current) clearTimeout(silenceTimeoutRef.current);
@@ -572,6 +665,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   const handleInterrupt = () => {
     stopAudio();
     isSubmittingRef.current = false;
+    callStateRef.current = "listening";
     setState("listening");
     resumeListening();
   };
@@ -580,9 +674,11 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   const handleReplay = () => {
     if (!currentAiSpeech) return;
     unlockAudioContextAndPlayer();
+    callStateRef.current = "speaking";
     setState("speaking");
     playSpeech(currentAiSpeech, () => {
       if (isCallActiveRef.current) {
+        callStateRef.current = "listening";
         setState("listening");
         resumeListening();
       }
@@ -592,6 +688,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
   // Clear conversation history
   const handleClearHistory = () => {
     setHistory([]);
+    historyRef.current = [];
     lastSubmittedTextRef.current = "";
     try {
       sessionStorage.removeItem(STORAGE_KEY);
@@ -947,25 +1044,34 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
             {history.length === 0 ? (
               <p className="text-center text-xs text-muted py-6">Belum ada rekaman percakapan.</p>
             ) : (
-              history.map((turn, i) => (
-                <div
-                  key={i}
-                  className={`flex flex-col ${turn.role === "user" ? "items-end" : "items-start"}`}
-                >
-                  <span className="text-[10px] text-muted mb-1 px-1">
-                    {turn.role === "user" ? "Anda" : "Estaka AI"} · {turn.time}
-                  </span>
+              history
+                .filter((turn, idx, arr) => {
+                  if (idx === 0) return true;
+                  const prev = arr[idx - 1];
+                  return !(
+                    prev.role === turn.role &&
+                    prev.content.trim().toLowerCase() === turn.content.trim().toLowerCase()
+                  );
+                })
+                .map((turn, i) => (
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                      turn.role === "user"
-                        ? "rounded-br-sm bg-accent text-bg"
-                        : "rounded-bl-sm border border-line bg-bg text-fg font-serif"
-                    }`}
+                    key={i}
+                    className={`flex flex-col ${turn.role === "user" ? "items-end" : "items-start"}`}
                   >
-                    {turn.content}
+                    <span className="text-[10px] text-muted mb-1 px-1">
+                      {turn.role === "user" ? "Anda" : "Estaka AI"} · {turn.time}
+                    </span>
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                        turn.role === "user"
+                          ? "rounded-br-sm bg-accent text-bg"
+                          : "rounded-bl-sm border border-line bg-bg text-fg font-serif"
+                      }`}
+                    >
+                      {turn.content}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
             )}
           </div>
         </section>
