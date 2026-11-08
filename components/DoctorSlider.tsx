@@ -22,6 +22,9 @@ export default function DoctorSlider() {
   const api = useRef<Api | null>(null);
   const opener = useRef<HTMLElement | null>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLDivElement>(null);
   const shownRef = useRef(0);
   const pinRef = useRef<ScrollTrigger | null>(null); // set while the section is pinned (desktop): scroll drives the slider
   const wantedRef = useRef(0); // newest requested doctor; a pending swap must never be killed by an older fade-in
@@ -35,7 +38,7 @@ export default function DoctorSlider() {
     setMounted(true);
   }, []);
 
-  const { contextSafe } = useGSAP(
+  useGSAP(
     () => {
       const mm = gsap.matchMedia();
       mm.add({ motion: MOTION_OK, reduce: "(prefers-reduced-motion: reduce)" }, (ctx) => {
@@ -318,30 +321,54 @@ export default function DoctorSlider() {
   };
 
   // ---- Profile (story) panel: slides in from the left, returns the same way. ----
-  const animIn = contextSafe((reduce: boolean) => {
-    gsap.killTweensOf([".cs-panel", ".cs-scrim", ".cs-panel-img", ".cs-panel-item"]);
+  const animIn = (reduce: boolean) => {
+    const panel = panelRef.current;
+    const scrim = scrimRef.current;
+    if (!panel || !scrim) return;
+
+    const img = imgRef.current;
+    const items = panel.querySelectorAll(".cs-panel-item");
+    const targets: (Element | Node)[] = [panel, scrim];
+    if (img) targets.push(img);
+    if (items.length) targets.push(...Array.from(items));
+    gsap.killTweensOf(targets);
+
     if (reduce) {
-      gsap.fromTo(".cs-panel", { opacity: 0, xPercent: 0 }, { opacity: 1, duration: 0.2 });
-      gsap.to(".cs-scrim", { opacity: 1, duration: 0.2 });
+      gsap.fromTo(panel, { opacity: 0, xPercent: 0 }, { opacity: 1, duration: 0.2 });
+      gsap.to(scrim, { opacity: 1, duration: 0.2 });
     } else {
-      gsap.fromTo(".cs-panel", { xPercent: -100, opacity: 1, x: 0 }, { xPercent: 0, duration: 0.55, ease: "power3.out" });
-      gsap.to(".cs-scrim", { opacity: 1, duration: 0.4 });
-      gsap.fromTo(".cs-panel-img", { scale: 1.08 }, { scale: 1, duration: 1.1, ease: "power3.out" });
-      gsap.fromTo(".cs-panel-item", { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.07, delay: 0.2, ease: "power3.out" });
+      gsap.fromTo(panel, { xPercent: -100, opacity: 1, x: 0 }, { xPercent: 0, duration: 0.55, ease: "power3.out" });
+      gsap.to(scrim, { opacity: 1, duration: 0.4 });
+      if (img) gsap.fromTo(img, { scale: 1.08 }, { scale: 1, duration: 1.1, ease: "power3.out" });
+      if (items.length) gsap.fromTo(items, { y: 22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, stagger: 0.07, delay: 0.2, ease: "power3.out" });
     }
-  });
-  const animOut = contextSafe((reduce: boolean, done: () => void) => {
-    gsap.killTweensOf([".cs-panel", ".cs-scrim"]);
-    gsap.to(".cs-scrim", { opacity: 0, duration: 0.3 });
-    gsap.to(".cs-panel", { ...(reduce ? { opacity: 0 } : { xPercent: -100 }), duration: reduce ? 0.2 : 0.45, ease: "power3.inOut", onComplete: done });
-  });
+  };
+
+  const animOut = (reduce: boolean, done: () => void) => {
+    const panel = panelRef.current;
+    const scrim = scrimRef.current;
+    if (!panel || !scrim) {
+      done();
+      return;
+    }
+    gsap.killTweensOf([panel, scrim]);
+    gsap.to(scrim, { opacity: 0, duration: 0.3 });
+    gsap.to(panel, {
+      ...(reduce ? { opacity: 0 } : { xPercent: -100 }),
+      duration: reduce ? 0.2 : 0.45,
+      ease: "power3.inOut",
+      onComplete: done,
+    });
+  };
 
   const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const openProfile = (trigger: HTMLElement) => {
     opener.current = trigger;
     setOpen(true);
-    animIn(reduced());
-    window.setTimeout(() => closeBtn.current?.focus(), 60);
+    requestAnimationFrame(() => {
+      animIn(reduced());
+      window.setTimeout(() => closeBtn.current?.focus(), 60);
+    });
   };
   const closeProfile = () =>
     animOut(reduced(), () => {
@@ -517,12 +544,14 @@ export default function DoctorSlider() {
         createPortal(
           <>
             <div
+              ref={scrimRef}
               className="cs-scrim fixed inset-0 z-[70] bg-black/60 opacity-0 transition-opacity"
               style={{ pointerEvents: open ? "auto" : "none" }}
               onClick={closeProfile}
               aria-hidden="true"
             />
             <div
+              ref={panelRef}
               role="dialog"
               aria-modal="true"
               aria-label={d.name}
@@ -548,7 +577,7 @@ export default function DoctorSlider() {
               </button>
 
               <div className="relative overflow-hidden bg-surface2">
-                <div className="cs-panel-img absolute inset-0 origin-bottom">
+                <div ref={imgRef} className="cs-panel-img absolute inset-0 origin-bottom">
                   {open && (
                     <Image
                       src={d.photo ?? ""}
