@@ -39,7 +39,38 @@ export default function Hero() {
   useEffect(() => {
     if (!roomCapable()) return;
     wantsRoom.current = true;
-    setRoom(true);
+    let started = false;
+    const go = () => {
+      if (started) return;
+      started = true;
+      setRoom(true);
+    };
+
+    // Immediate mount on any user interaction
+    const evs = ["scroll", "wheel", "touchstart", "pointerdown", "pointermove", "keydown"] as const;
+    evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
+
+    // Or mount after browser completes initial paint & idle cycle
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    let idleId: number | null = null;
+    let timerId: NodeJS.Timeout | null = null;
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+    if (w.requestIdleCallback) {
+      idleId = w.requestIdleCallback(go, { timeout: isMobile ? 7500 : 350 });
+    } else {
+      timerId = setTimeout(go, isMobile ? 4000 : 120);
+    }
+
+    return () => {
+      evs.forEach((e) => window.removeEventListener(e, go));
+      if (idleId !== null && w.cancelIdleCallback) w.cancelIdleCallback(idleId);
+      if (timerId !== null) clearTimeout(timerId);
+    };
   }, []);
 
   useLazyGsap(root, ({ gsap, MOTION_OK, FINE_POINTER }) => {
@@ -91,7 +122,7 @@ export default function Hero() {
   });
 
   return (
-    <section id="top" ref={root} data-room={room ? "on" : undefined} className="group relative flex min-h-dvh items-center overflow-hidden pt-[72px] data-[room=on]:h-dvh data-[room=on]:items-start data-[room=on]:pt-24 lg:data-[room=on]:items-center lg:data-[room=on]:pt-[72px]">
+    <section id="top" ref={root} data-room={room ? "on" : undefined} className="group relative flex h-dvh min-h-dvh items-start pt-24 overflow-hidden lg:items-center lg:pt-[72px]">
       {room && <HeroRoom section={root} />}
       <div className="pointer-events-none absolute inset-0 -z-10 group-data-[room=on]:hidden" aria-hidden="true">
         <div className="h-glow glow-pulse absolute -right-32 top-1/4 size-[640px] rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, var(--glow), transparent)" }} />

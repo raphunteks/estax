@@ -11,7 +11,17 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  experimental: { inlineCss: true },
+  compress: true,
+  experimental: {
+    inlineCss: true,
+    optimizePackageImports: [
+      "lucide-react",
+      "three",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "gsap",
+    ],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

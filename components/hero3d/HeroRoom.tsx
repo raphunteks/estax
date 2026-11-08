@@ -159,7 +159,7 @@ export default function HeroRoom({ section }: { section: RefObject<HTMLElement |
           frameloop="demand"
           flat
           camera={{ position: [0, 1.6, 4.6], fov: 50, near: 0.1, far: 40 }}
-          gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
+          gl={{ antialias: false, powerPreference: "high-performance", alpha: false, stencil: false }}
           onCreated={(s) => {
             invalidate.current = s.invalidate;
             s.invalidate();

@@ -87,7 +87,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { color: "#0a0d18" },
+    { color: "#f6f1e4" },
   ],
   viewportFit: "cover",
 };
@@ -97,7 +97,7 @@ const bootScript = `(function(){var d=document.documentElement,T={siang:1,malam:
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" data-scroll-behavior="smooth" data-theme="malam" data-pref="auto" className={`${display.variable} ${sans.variable}`} suppressHydrationWarning>
+    <html lang="id" data-scroll-behavior="smooth" data-theme="siang" data-pref="auto" className={`${display.variable} ${sans.variable}`} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="shortcut icon" href="/favicon.ico" />

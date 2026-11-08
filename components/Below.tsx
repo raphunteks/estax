@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { registerWebMcp } from "@/lib/webmcp";
 import type { SiteContent } from "@/lib/site-types";
 
@@ -9,23 +9,42 @@ const Sections = dynamic(() => import("@/components/BelowSections"), { ssr: fals
 const ANCHORS = ["doctors", "team", "specialties", "technology", "journey", "results", "testimonials", "stats", "pricing", "faq", "location", "reservasi"];
 
 /**
- * Mounts the below-the-fold sections on first user intent (scroll, pointer, touch, key, hash change) or after a
- * plain timer (mounted section by section so no single long task). The timer is a setTimeout on purpose: requestIdleCallback fires right after load and would pull
- * everything into the initial paint window.
+ * Mounts the below-the-fold sections on first user intent (scroll, pointer, touch, key, hash change)
+ * or when the user scrolls near the fold (IntersectionObserver with 600px prefetch margin).
  */
 export default function Below({ site }: { site: SiteContent }) {
   const [on, setOn] = useState<false | "now" | "staged">(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => registerWebMcp(), []);
 
   useEffect(() => {
     const go = () => setOn("now");
-    const evs = ["scroll", "pointerdown", "touchstart", "keydown", "hashchange"] as const;
+    if (typeof window !== "undefined" && window.location.hash) {
+      go();
+      return;
+    }
+
+    const evs = ["scroll", "wheel", "pointerdown", "touchstart", "keydown", "hashchange"] as const;
     evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
-    const t = setTimeout(() => setOn((o) => o || "staged"), 9000);
+
+    let obs: IntersectionObserver | null = null;
+    if (triggerRef.current && typeof IntersectionObserver !== "undefined") {
+      obs = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            go();
+            obs?.disconnect();
+          }
+        },
+        { rootMargin: "600px" }
+      );
+      obs.observe(triggerRef.current);
+    }
+
     return () => {
-      clearTimeout(t);
       evs.forEach((e) => window.removeEventListener(e, go));
+      obs?.disconnect();
     };
   }, []);
 
@@ -40,7 +59,7 @@ export default function Below({ site }: { site: SiteContent }) {
 
   if (on) return <Sections onReady={ready} staged={on === "staged"} site={site} />;
   return (
-    <div aria-hidden="true" style={{ minHeight: "400vh" }}>
+    <div ref={triggerRef} aria-hidden="true" style={{ minHeight: "400vh" }}>
       {ANCHORS.map((a) => (
         <div key={a} id={a} />
       ))}
