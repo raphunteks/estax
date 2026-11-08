@@ -160,7 +160,10 @@ export default function HeroRoom({ section }: { section: RefObject<HTMLElement |
           flat
           camera={{ position: [0, 1.6, 4.6], fov: 50, near: 0.1, far: 40 }}
           gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
-          onCreated={(s) => (invalidate.current = s.invalidate)}
+          onCreated={(s) => {
+            invalidate.current = s.invalidate;
+            s.invalidate();
+          }}
         >
           <color attach="background" args={[pal.bg]} />
           <fog attach="fog" args={[pal.bg, 8, 21]} />

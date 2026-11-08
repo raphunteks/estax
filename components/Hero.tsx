@@ -37,20 +37,14 @@ export default function Hero() {
   const [room, setRoom] = useState(false);
 
   useEffect(() => {
-    // Decide once on mount; a visitor who is already scrolling keeps the static hero (no late pin jump).
-    if (!roomCapable() || window.scrollY > 40) return;
+    if (!roomCapable()) return;
     wantsRoom.current = true;
-    // Warm the chunk immediately so the swap is near-instant and the static hero shows only for a blink.
-    void import("./hero3d/HeroRoom");
-    const go = () => setRoom(true);
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
-    if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 600 });
-    else setTimeout(go, 200);
+    setRoom(true);
   }, []);
 
   useLazyGsap(root, ({ gsap, MOTION_OK, FINE_POINTER }) => {
     // The 3D room owns the hero's scroll choreography; the static parallax only runs without it.
-    if (wantsRoom.current) return;
+    if (wantsRoom.current || room) return;
     {
       const mm = gsap.matchMedia();
 
