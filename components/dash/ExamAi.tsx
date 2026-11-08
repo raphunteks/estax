@@ -10,6 +10,13 @@ const area = "w-full rounded-xl border border-line bg-transparent p-3 text-sm ou
 const btn = "min-h-11 rounded-xl border border-line px-4 text-sm disabled:opacity-40";
 const LABEL: Record<keyof Soap, string> = { s: "Subjective", o: "Objective", a: "Assessment", p: "Plan" };
 
+const EXAM_PRESETS = [
+  { label: "⚡ Pulpitis (PSA)", text: "Pasien mengeluh nyeri berdenyut gigi 36 sejak 3 hari terutama malam, linu tajam dingin. Gigi 36 karies profunda perforasi, tes dingin (+) nyeri lama, perkusi (-). Diagnosis: Pulpitis ireversibel simtomatik gigi 36. Rencana: Devitalisasi pulpa, tumpat sementara, R/ Asam mefenamat 500mg prn, kontrol 1 minggu." },
+  { label: "🦷 Karies (Tambal)", text: "Pasien mengeluh makanan terselip dan ngilu minum dingin gigi 16. Gigi 16 karies media oklusal, sondasi (+), tes dingin (+), perkusi (-). Diagnosis: Karies dentin gigi 16 / Pulpitis reversibel. Rencana: Preparasi, restorasi resin komposit sinar, poles." },
+  { label: "🪥 Scaling", text: "Gusi mudah berdarah saat sikat gigi. Kalkulus supragingiva & subgingiva RA/RB merata, gingiva eritema, BOP (+). Diagnosis: Gingivitis marginalis ec kalkulus. Rencana: Scaling ultrasonik RA & RB, polishing, edukasi DHE." },
+  { label: "⬛ Nekrosis", text: "Gigi 11 berubah warna keabuan, mengganjal saat mengunyah. Karies profunda/diskolorasi gigi 11, tes dingin (-), perkusi (+) ringan. Diagnosis: Nekrosis pulpa gigi 11. Rencana: Foto periapikal, pembukaan akses, medikasi Ca(OH)2, tumpat sementara." },
+] as const;
+
 /** AI helpers inside the exam: dictation to SOAP, history digest, completeness check (no AI) and aftercare message. Drafts only. */
 export default function ExamAi({ visitId, patientId, canEdit, reason, checks, onApply }: { visitId: string; patientId: string; canEdit: boolean; reason?: string; checks: Check[]; onApply: (s: Soap) => void }) {
   const [text, setText] = useState("");
@@ -20,6 +27,13 @@ export default function ExamAi({ visitId, patientId, canEdit, reason, checks, on
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
   const dict = useDictate((t) => setText((x) => (x ? `${x}\n` : "") + t));
+
+  const insertTag = (tag: string) => {
+    setText((prev) => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed}\n${tag}` : tag;
+    });
+  };
 
   const run = async <T,>(key: string, tool: string, body: object, ok: (r: T) => void) => {
     setBusy(key); setErr("");
@@ -32,11 +46,42 @@ export default function ExamAi({ visitId, patientId, canEdit, reason, checks, on
   return (
     <div className="mt-4 grid items-start gap-4 lg:grid-cols-2">
       <Card title="Dikte ke SOAP (AI)">
+        <div className="mb-2 space-y-1.5 rounded-xl border border-line bg-surface/50 p-2.5 text-xs">
+          <div className="flex flex-wrap gap-1">
+            {EXAM_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                disabled={!canEdit}
+                onClick={() => setText(p.text)}
+                className="rounded-md border border-line bg-surface px-2 py-0.5 text-xs text-muted hover:border-accent hover:text-accent active:scale-95 disabled:opacity-40"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1 border-t border-line/50 pt-1.5">
+            <span className="self-center text-[10px] text-muted">Tag:</span>
+            {(["[S] Keluhan: ", "[O] Fisik gigi: ", "[A] Diagnosis: ", "[P] Rencana: "] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                disabled={!canEdit}
+                onClick={() => insertTag(t)}
+                className="rounded border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[11px] font-medium text-accent hover:bg-accent/20 active:scale-95 disabled:opacity-40"
+              >
+                +{t.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <label htmlFor="exam-ai-note" className="mb-1 block text-sm">Catatan atau dikte</label>
         <textarea id="exam-ai-note" name="exam-ai-note" className={area} rows={5} maxLength={4000} value={text} disabled={!canEdit} onChange={(e) => setText(e.target.value)} placeholder="Contoh: karies dalam gigi 36, perkusi positif, rencana PSA minggu depan" />
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button type="button" className={`${btn} ${dict.rec ? "border-red-400 text-red-300" : ""}`} disabled={!canEdit || dict.busy} aria-pressed={dict.rec} onClick={dict.toggle}>{dict.rec ? "■ Berhenti" : dict.busy ? "Mengubah suara…" : "● Dikte"}</button>
-          <button type="button" className="min-h-11 rounded-xl bg-accent px-5 text-sm font-medium text-bg disabled:opacity-40" disabled={!canEdit || busy === "soap" || text.trim().length < 2} onClick={() => run<{ soap?: Soap }>("soap", "soap", { text, patientId }, (r) => r.soap && setDraft(r.soap))}>{busy === "soap" ? "Memproses…" : "Susun jadi SOAP"}</button>
+          <button type="button" className="min-h-11 rounded-xl bg-accent px-4 text-sm font-medium text-bg disabled:opacity-40" disabled={!canEdit || busy === "soap" || text.trim().length < 2} onClick={() => run<{ soap?: Soap }>("soap", "soap", { text, patientId, autoDraft: false }, (r) => r.soap && setDraft(r.soap))}>{busy === "soap" ? "Memproses…" : "Susun jadi SOAP"}</button>
+          <button type="button" className="min-h-11 rounded-xl border border-accent/40 bg-accent/15 px-3.5 text-sm font-medium text-accent hover:bg-accent/25 active:scale-95 disabled:opacity-40" disabled={!canEdit || busy === "soap_auto" || text.trim().length < 2} onClick={() => run<{ soap?: Soap }>("soap_auto", "soap", { text, patientId, autoDraft: true }, (r) => r.soap && setDraft(r.soap))}>{busy === "soap_auto" ? "Menyusun draf…" : "✨ Draf Otomatis"}</button>
         </div>
         {draft && (
           <div className="mt-4 space-y-2 rounded-xl border border-line p-3 text-sm">

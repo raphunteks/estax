@@ -46,9 +46,20 @@ export function parseSoap(raw: string) {
   return p.success && Object.values(p.data).some(Boolean) ? p.data : null;
 }
 
-export async function soapFromText(text: string, names: string[] = []) {
-  const system =
+export async function soapFromText(text: string, names: string[] = [], autoDraft: boolean = false) {
+  const strictSystem =
     "Anda pencatat rekam medis gigi. Ubah catatan dokter (hasil dikte atau ketikan) menjadi SOAP ringkas. Aturan: pakai HANYA fakta yang ada di catatan; jangan menambah diagnosis, obat, dosis, angka, atau gigi yang tidak disebut; bagian tanpa informasi dikosongkan (string kosong). Diagnosis yang disebut dokter masuk ke Assessment. Keluaran HANYA JSON satu baris tanpa penjelasan: {\"s\":\"\",\"o\":\"\",\"a\":\"\",\"p\":\"\"}.";
+
+  const autoSystem =
+    "Anda asisten dokter gigi spesialis rekam medis. Berdasarkan catatan atau diagnosis yang diberikan dokter, susun DRAF LENGKAP SOAP KEDOKTERAN GIGI (S, O, A, P) yang sistematis dan berstandar klinis.\n" +
+    "Jika catatan dokter singkat atau hanya menyebut diagnosis/gejala (misal: 'pulpitis ireversibel'), lengkapi draf standar klinis gigi yang realistis:\n" +
+    "- S (Subjective): Keluhan utama, karakteristik & durasi nyeri (spontan/malam/linu tajam), pemicu dingin/manis, riwayat alergi (-).\n" +
+    "- O (Objective): Temuan klinis intraoral (inspeksi kavitas/karies, tes vitalitas termal dingin CE, tes sondasi, perkusi, palpasi, mobilitas gigi, kondisi gingiva).\n" +
+    "- A (Assessment): Diagnosis kerja/definitif lengkap beserta kode ICD-10 gigi yang relevan.\n" +
+    "- P (Plan): 1. Informed consent tindakan. 2. Terapi/tindakan hari ini (preparasi/PSA/restorasi/ekstraksi/scaling). 3. Terapi obat analgetik/antibiotik jika diindikasikan (nama obat, dosis, frekuensi). 4. Edukasi pasca tindakan & jadwal kontrol lanjutan.\n" +
+    "Pertahankan nomor gigi atau detail yang telah disebut dokter jika ada. Format keluaran HANYA JSON satu baris tanpa penjelasan: {\"s\":\"\",\"o\":\"\",\"a\":\"\",\"p\":\"\"}.";
+
+  const system = autoDraft ? autoSystem : strictSystem;
   const user = wrap("catatan", redact(text, names));
   // Reasoning models spend tokens on thinking first, so allow plenty; retry once with a stricter reminder if the reply is unreadable.
   let out = await ask(system, user, { max: 2500 });

@@ -10,7 +10,7 @@ import { redact } from "@/lib/ai-redact";
 
 const text = (n: number) => z.string().trim().min(2).max(n);
 const body = {
-  soap: z.object({ text: text(4000), patientId: z.string().max(40).optional() }),
+  soap: z.object({ text: text(4000), patientId: z.string().max(40).optional(), autoDraft: z.boolean().optional() }),
   tidy: z.object({ text: text(4000), patientId: z.string().max(40).optional() }),
   summary: z.object({ patientId: z.string().max(40), reason: z.string().trim().max(200).optional() }),
   wa: z.object({ message: text(1000) }),
@@ -47,7 +47,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tool: s
   try {
     const names = async () => { const pt = d.patientId ? await getPatient(String(d.patientId)) : null; return pt ? [pt.name] : []; };
     let result: unknown;
-    if (tool === "soap") { result = { soap: await soapFromText(String(d.text), await names()) }; if (!(result as { soap: unknown }).soap) return fail("ai_bad_output", 502, "Hasil AI tidak bisa dibaca. Coba lagi."); }
+    if (tool === "soap") { result = { soap: await soapFromText(String(d.text), await names(), Boolean(d.autoDraft)) }; if (!(result as { soap: unknown }).soap) return fail("ai_bad_output", 502, "Hasil AI tidak bisa dibaca. Coba lagi."); }
     else if (tool === "edu") {
       const v = await getVisit(String(d.visitId));
       if (!v) return fail("not_found", 404);
