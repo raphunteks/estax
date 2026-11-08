@@ -1,18 +1,21 @@
 "use client";
 
 // Silence Three.js r183+ deprecation warning for THREE.Clock used internally by @react-three/fiber
-if (typeof window !== "undefined" && !(window as any).__THREE_CLOCK_SILENCED__) {
-  (window as any).__THREE_CLOCK_SILENCED__ = true;
-  const origWarn = console.warn;
-  console.warn = (...args: unknown[]) => {
-    if (
-      typeof args[0] === "string" &&
-      args[0].includes("Clock: This module has been deprecated")
-    ) {
-      return;
-    }
-    origWarn.apply(console, args);
-  };
+if (typeof window !== "undefined") {
+  const win = window as unknown as { __THREE_CLOCK_SILENCED__?: boolean };
+  if (!win.__THREE_CLOCK_SILENCED__) {
+    win.__THREE_CLOCK_SILENCED__ = true;
+    const origWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      if (
+        typeof args[0] === "string" &&
+        args[0].includes("Clock: This module has been deprecated")
+      ) {
+        return;
+      }
+      origWarn.apply(console, args);
+    };
+  }
 }
 
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -85,7 +88,7 @@ export default function HeroRoom({ section }: { section: RefObject<HTMLElement |
   const invalidate = useRef<() => void>(() => {});
   const skipTo = useRef(0);
   const [pal, setPal] = useState<Palette>(readPalette);
-  const [dpr, setDpr] = useState<[number, number]>(() => (window.innerWidth < 640 ? [1, 1.5] : [1, 2]));
+  const [dpr, setDpr] = useState<[number, number]>(() => (window.innerWidth < 640 ? [1, 1.3] : [1, 1.75]));
 
   // Re-read colours when the visitor switches theme.
   useEffect(() => {

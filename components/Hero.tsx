@@ -1,18 +1,21 @@
 "use client";
 
 // Silence Three.js r183+ deprecation warning for THREE.Clock used internally by @react-three/fiber
-if (typeof window !== "undefined" && !(window as any).__THREE_CLOCK_SILENCED__) {
-  (window as any).__THREE_CLOCK_SILENCED__ = true;
-  const origWarn = console.warn;
-  console.warn = (...args: unknown[]) => {
-    if (
-      typeof args[0] === "string" &&
-      args[0].includes("Clock: This module has been deprecated")
-    ) {
-      return;
-    }
-    origWarn.apply(console, args);
-  };
+if (typeof window !== "undefined") {
+  const win = window as unknown as { __THREE_CLOCK_SILENCED__?: boolean };
+  if (!win.__THREE_CLOCK_SILENCED__) {
+    win.__THREE_CLOCK_SILENCED__ = true;
+    const origWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      if (
+        typeof args[0] === "string" &&
+        args[0].includes("Clock: This module has been deprecated")
+      ) {
+        return;
+      }
+      origWarn.apply(console, args);
+    };
+  }
 }
 
 import { useEffect, useRef, useState } from "react";
@@ -37,10 +40,12 @@ export default function Hero() {
     // Decide once on mount; a visitor who is already scrolling keeps the static hero (no late pin jump).
     if (!roomCapable() || window.scrollY > 40) return;
     wantsRoom.current = true;
+    // Warm the chunk immediately so the swap is near-instant and the static hero shows only for a blink.
+    void import("./hero3d/HeroRoom");
     const go = () => setRoom(true);
     const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
-    if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 1500 });
-    else setTimeout(go, 600);
+    if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 600 });
+    else setTimeout(go, 200);
   }, []);
 
   useLazyGsap(root, ({ gsap, MOTION_OK, FINE_POINTER }) => {

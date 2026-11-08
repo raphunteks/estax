@@ -249,7 +249,7 @@ export default function ClinicRoom({ pal, progress }: { pal: Palette; progress: 
       <Plant position={[2.4, 0, -12.6]} pal={pal} />
 
       {/* Rendered once: soft contact shadows ground every object without per-frame cost. */}
-      <ContactShadows position={[0, 0.006, -6]} scale={[6, 14]} resolution={512} frames={1} blur={2.4} opacity={pal.dark ? 0.55 : 0.32} far={2.2} />
+      <ContactShadows position={[0, 0.006, -6]} scale={[6, 14]} resolution={256} frames={1} blur={2.4} opacity={pal.dark ? 0.55 : 0.32} far={2.2} />
     </group>
   );
 }
