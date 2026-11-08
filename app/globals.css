@@ -272,7 +272,7 @@ details[open] .faq-plus { transform: rotate(45deg); }
 /* Accessibility: frostier surfaces and firmer edges on request. */
 @media (prefers-reduced-transparency: reduce) {
   .material { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .glass { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .glass { background: var(--surface2); backdrop-filter: none; -webkit-backdrop-filter: none; border-color: var(--line); }
 }
 @media (prefers-contrast: more) {
   .material, .glass { border-color: var(--fg); }
@@ -283,9 +283,16 @@ details[open] .faq-plus { transform: rotate(45deg); }
   html { scroll-behavior: auto; }
   /* Gentler equivalent: popovers cross-fade instead of scaling. */
   .menu-panel { scale: 1; translate: 0 0; }
-  *, *::before, *::after {
+  .float,
+  .spin-slow,
+  .glow-pulse,
+  .scroll-line,
+  .pulse-ring {
     animation: none !important;
-    transition-duration: 0.01ms !important;
+  }
+  *:not(.animate-spin):not([data-allow-motion]) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 

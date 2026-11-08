@@ -39,38 +39,7 @@ export default function Hero() {
   useEffect(() => {
     if (!roomCapable()) return;
     wantsRoom.current = true;
-    let started = false;
-    const go = () => {
-      if (started) return;
-      started = true;
-      setRoom(true);
-    };
-
-    // Immediate mount on any user interaction
-    const evs = ["scroll", "wheel", "touchstart", "pointerdown", "pointermove", "keydown"] as const;
-    evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
-
-    // Or mount after browser completes initial paint & idle cycle
-    const w = window as Window & {
-      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-
-    let idleId: number | null = null;
-    let timerId: NodeJS.Timeout | null = null;
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
-    if (w.requestIdleCallback) {
-      idleId = w.requestIdleCallback(go, { timeout: isMobile ? 7500 : 350 });
-    } else {
-      timerId = setTimeout(go, isMobile ? 4000 : 120);
-    }
-
-    return () => {
-      evs.forEach((e) => window.removeEventListener(e, go));
-      if (idleId !== null && w.cancelIdleCallback) w.cancelIdleCallback(idleId);
-      if (timerId !== null) clearTimeout(timerId);
-    };
+    setRoom(true);
   }, []);
 
   useLazyGsap(root, ({ gsap, MOTION_OK, FINE_POINTER }) => {
