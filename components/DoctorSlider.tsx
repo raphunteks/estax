@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { FINE_POINTER, MOTION_OK, ScrollTrigger, gsap, useGSAP } from "@/lib/gsap";
 import { L } from "./L";
@@ -28,6 +29,11 @@ export default function DoctorSlider() {
   const [active, setActive] = useState(0); // follows the slider position (drives a11y + counter)
   const [shown, setShown] = useState(0); // info panel content, swapped between fade-out and fade-in
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { contextSafe } = useGSAP(
     () => {
@@ -345,9 +351,14 @@ export default function DoctorSlider() {
 
   useEffect(() => {
     if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onEsc = (e: KeyboardEvent) => e.key === "Escape" && closeProfile();
     window.addEventListener("keydown", onEsc);
-    return () => window.removeEventListener("keydown", onEsc);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onEsc);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -501,47 +512,83 @@ export default function DoctorSlider() {
         </div>
       </div>
 
-      {/* Profile panel */}
-      <div className="cs-scrim fixed inset-0 z-[64] bg-black/55 opacity-0" style={{ pointerEvents: open ? "auto" : "none" }} onClick={closeProfile} aria-hidden="true" />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={d.name}
-        inert={!open}
-        className="cs-panel material fixed inset-y-0 left-0 z-[65] grid w-full max-w-4xl grid-rows-[minmax(0,40%)_1fr] overflow-y-auto border-r border-line sm:grid-cols-2 sm:grid-rows-1"
-        style={{ visibility: open ? "visible" : "hidden", background: "color-mix(in srgb, var(--surface) 94%, transparent)", backdropFilter: "blur(32px) saturate(180%)" }}
-      >
-        <div className="relative overflow-hidden bg-surface2">
-          <div className="cs-panel-img absolute inset-0 origin-bottom">
-            {open && <Image src={d.photo ?? ""} alt="" width={1080} height={1440} sizes="(min-width:640px) 420px, 100vw" className="absolute bottom-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2 object-contain object-bottom" />}
-          </div>
-        </div>
-        <div className="flex flex-col justify-center gap-4 p-7 sm:p-10">
-          <button ref={closeBtn} type="button" onClick={closeProfile} className="cs-panel-item press absolute right-4 top-4 grid size-11 place-items-center rounded-full border border-line" aria-label={c.close.id}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-          <p className="cs-panel-item eyebrow">
-            <L v={d.role} />
-          </p>
-          <h3 className="cs-panel-item display text-4xl sm:text-5xl">{d.name}</h3>
-          <p className="cs-panel-item leading-relaxed text-muted">
-            <L v={d.bio} />
-          </p>
-          <ul className="cs-panel-item space-y-2">
-            {d.focus.map((f, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
-                <L v={f} />
-              </li>
-            ))}
-          </ul>
-          <a href={wa ?? `/reservasi?dokter=${encodeURIComponent(d.name.replace(/^drg\.\s*/i, ""))}`} {...(wa ? { target: "_blank", rel: "noopener noreferrer" } : { onClick: closeProfile })} className="cs-panel-item btn btn-primary mt-2 self-start">
-            <L v={c.book} />
-          </a>
-        </div>
-      </div>
+      {/* Profile panel portalled to body to prevent stacking context traps and header overlap */}
+      {mounted &&
+        createPortal(
+          <>
+            <div
+              className="cs-scrim fixed inset-0 z-[70] bg-black/60 opacity-0 transition-opacity"
+              style={{ pointerEvents: open ? "auto" : "none" }}
+              onClick={closeProfile}
+              aria-hidden="true"
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={d.name}
+              inert={!open}
+              className="cs-panel material fixed inset-y-0 left-0 z-[75] grid w-full max-w-2xl grid-rows-[minmax(0,40%)_1fr] overflow-y-auto border-r border-line sm:grid-cols-2 sm:grid-rows-1 shadow-2xl"
+              style={{
+                visibility: open ? "visible" : "hidden",
+                background: "color-mix(in srgb, var(--surface) 95%, transparent)",
+                backdropFilter: "blur(32px) saturate(180%)",
+              }}
+            >
+              {/* Floating Close Button: always top-right of panel, z-30, never covered by header */}
+              <button
+                ref={closeBtn}
+                type="button"
+                onClick={closeProfile}
+                className="cs-panel-item press absolute right-4 top-4 sm:right-6 sm:top-6 z-30 grid size-11 place-items-center rounded-full border border-line bg-surface/85 text-fg shadow-sm backdrop-blur-md transition-all hover:border-accent hover:bg-surface active:scale-95"
+                aria-label={c.close.id}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+
+              <div className="relative overflow-hidden bg-surface2">
+                <div className="cs-panel-img absolute inset-0 origin-bottom">
+                  {open && (
+                    <Image
+                      src={d.photo ?? ""}
+                      alt=""
+                      width={1080}
+                      height={1440}
+                      sizes="(min-width:640px) 340px, 100vw"
+                      className="absolute bottom-0 left-1/2 h-full w-auto max-w-none -translate-x-1/2 object-contain object-bottom"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="relative flex flex-col justify-center gap-3.5 p-6 sm:p-8">
+                <p className="cs-panel-item eyebrow">
+                  <L v={d.role} />
+                </p>
+                <h3 className="cs-panel-item display text-3xl sm:text-4xl leading-tight">{d.name}</h3>
+                <p className="cs-panel-item text-sm leading-relaxed text-muted">
+                  <L v={d.bio} />
+                </p>
+                <ul className="cs-panel-item space-y-2 text-sm">
+                  {d.focus.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
+                      <L v={f} />
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href={wa ?? `/reservasi?dokter=${encodeURIComponent(d.name.replace(/^drg\.\s*/i, ""))}`}
+                  {...(wa ? { target: "_blank", rel: "noopener noreferrer" } : { onClick: closeProfile })}
+                  className="cs-panel-item btn btn-primary mt-2 self-start"
+                >
+                  <L v={c.book} />
+                </a>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
     </section>
   );
 }
