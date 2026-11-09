@@ -52,7 +52,7 @@ export default function LiveSync() {
 
     if (pusherKey) {
       try {
-        pusher = new Pusher(pusherKey, { cluster: pusherCluster });
+        pusher = new Pusher(pusherKey, { cluster: pusherCluster, forceTLS: true });
         const channel = pusher.subscribe("estaka-live");
         channel.bind("rev", (data: { rev: number }) => {
           if (!dead && data?.rev) onRevChange(data.rev);
