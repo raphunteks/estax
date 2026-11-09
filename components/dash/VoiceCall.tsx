@@ -37,10 +37,32 @@ function fmtDuration(sec: number) {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function VoiceCall({ role = "pasien" }: { role?: string }) {
+export default function VoiceCall({ role: _role = "pasien" }: { role?: string }) {
   const [state, setState] = useState<CallState>("idle");
   const [duration, setDuration] = useState(0);
-  const [history, setHistory] = useState<Turn[]>([]);
+  const [history, setHistory] = useState<Turn[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed: Turn[] = JSON.parse(saved);
+        const cleaned: Turn[] = [];
+        for (const item of parsed) {
+          const prev = cleaned[cleaned.length - 1];
+          if (
+            prev &&
+            prev.role === item.role &&
+            prev.content.trim().toLowerCase() === item.content.trim().toLowerCase()
+          ) {
+            continue;
+          }
+          cleaned.push(item);
+        }
+        return cleaned;
+      }
+    } catch {}
+    return [];
+  });
   const [liveTranscript, setLiveTranscript] = useState("");
   const [currentAiSpeech, setCurrentAiSpeech] = useState("");
   const [isMuted, setIsMuted] = useState(false);
@@ -53,6 +75,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
   // References
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const isCallActiveRef = useRef(false);
   const isMutedRef = useRef(false);
@@ -85,29 +108,8 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
     historyRef.current = history;
   }, [history]);
 
-  // Load cached history and preload voices
+  // Preload voices
   useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed: Turn[] = JSON.parse(saved);
-        // Clean any historical duplicate artifacts
-        const cleaned: Turn[] = [];
-        for (const item of parsed) {
-          const prev = cleaned[cleaned.length - 1];
-          if (
-            prev &&
-            prev.role === item.role &&
-            prev.content.trim().toLowerCase() === item.content.trim().toLowerCase()
-          ) {
-            continue;
-          }
-          cleaned.push(item);
-        }
-        setHistory(cleaned);
-      }
-    } catch {}
-
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       const pickVoice = () => {
         const voices = window.speechSynthesis.getVoices();
@@ -229,6 +231,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
           audioPlayerRef.current = player;
         }
 
+        // eslint-disable-next-line react-hooks/immutability
         player.src = audioUrl;
         player.onended = () => {
           if (currentBlobUrlRef.current) {
@@ -408,8 +411,8 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
   // Setup Web Speech Recognition API
   const setupSpeechRecognition = useCallback(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       return null;
@@ -432,6 +435,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onresult = (event: any) => {
       if (!isCallActiveRef.current || isMutedRef.current) return;
 
@@ -483,6 +487,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
       }, delay);
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rec.onerror = (e: any) => {
       if (e.error === "no-speech") return;
       console.warn("[SpeechRecognition error]", e.error);
@@ -552,6 +557,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
 
       // AudioContext Meter for visualizer
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         if (ctx.state === "suspended") {
           await ctx.resume();
@@ -611,6 +617,7 @@ export default function VoiceCall({ role = "pasien" }: { role?: string }) {
         callStateRef.current = "listening";
         setState("listening");
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Mic access error:", err);
       callStateRef.current = "idle";

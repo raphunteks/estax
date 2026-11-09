@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import fs from "node:fs";
+import { broadcastRev } from "../realtime-server";
 
 /**
  * Minimal key-value surface used by the whole app (Upstash Redis in production).
@@ -201,7 +202,14 @@ const loud = (k: string) => !QUIET.some((p) => k.startsWith(p));
  * Ephemeral writes (TTL set, or QUIET prefixes) are ignored so logins and rate limits do not trigger refreshes.
  */
 function withRev(s: Store): Store {
-  const bump = () => s.incr("sys:rev").then(() => undefined, () => undefined);
+  const bump = async () => {
+    try {
+      const rev = Number(await s.incr("sys:rev"));
+      void broadcastRev(rev);
+    } catch {
+      /* ignore */
+    }
+  };
   return {
     ...s,
     async set(k, v, o) {

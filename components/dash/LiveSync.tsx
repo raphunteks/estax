@@ -3,71 +3,140 @@
 import { useRouter } from "next/navigation";
 import { startTransition, useEffect, useRef } from "react";
 import { LIVE_EVENT } from "@/lib/live";
+import Pusher from "pusher-js";
 
 /**
- * One heartbeat for the whole dashboard. It reads a single revision number; when it moves, the current route's server data
- * is refreshed in place (no reload, client state kept) and subscribed widgets are told to refetch.
- * Cadence adapts: 4 s while the user is active or data is changing, 10 s when calm, 20 s when idle. Paused while the tab is hidden.
+ * True Realtime Push Engine for Estaka:
+ * 1. Primary: Pusher WebSocket channel (if NEXT_PUBLIC_PUSHER_KEY is present in env).
+ * 2. Native Push: Server-Sent Events (SSE) via /api/realtime (zero third-party config).
+ * 3. Local Mutation: Instant 150ms sync via 'estaka:poke'.
+ *
+ * ZERO active HTTP polling requests while connected to Pusher or SSE!
  */
 export default function LiveSync() {
   const router = useRouter();
   const rev = useRef<number | null>(null);
-  const last = useRef(0);
 
   useEffect(() => {
     let dead = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    last.current = Date.now();
-    const touch = () => (last.current = Date.now());
-    const wait = () => {
-      const idle = Date.now() - last.current;
-      // Cadence ramah kuota: 15 detik saat aktif (hemat 75% dibanding 4s), 30 detik saat tenang, 60 detik saat idle.
-      // Catatan: Aksi lokal pengguna tetap instan (150ms) lewat event 'estaka:poke'.
-      return idle < 60_000 ? 15_000 : idle < 300_000 ? 30_000 : 60_000;
-    };
-    const tick = async () => {
-      if (dead) return;
-      if (document.visibilityState === "visible") {
-        try {
-          const r = await fetch("/api/rev", { cache: "no-store" });
-          if (r.status === 401 || r.status === 403) return; // session ended: stop quietly, the next navigation redirects
-          const j = (await r.json()) as { rev?: number };
-          if (typeof j.rev === "number") {
-            if (rev.current !== null && j.rev !== rev.current) {
-              touch();
-              startTransition(() => router.refresh());
-              window.dispatchEvent(new Event(LIVE_EVENT));
-            }
-            rev.current = j.rev;
-          }
-        } catch {
-          /* offline: try again next tick */
+    let es: EventSource | null = null;
+    let pusher: Pusher | null = null;
+    let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const onRevChange = (newRev: number) => {
+      if (typeof newRev === "number") {
+        if (rev.current !== null && newRev !== rev.current) {
+          startTransition(() => router.refresh());
+          window.dispatchEvent(new Event(LIVE_EVENT));
         }
+        rev.current = newRev;
       }
-      if (!dead) timer = setTimeout(tick, wait());
     };
+
+    // Manual poke on local mutation (e.g. user just saved an appointment or examination)
+    const poke = async () => {
+      try {
+        const r = await fetch("/api/rev", { cache: "no-store" });
+        if (r.ok) {
+          const j = (await r.json()) as { rev?: number };
+          if (typeof j.rev === "number") onRevChange(j.rev);
+        }
+      } catch {
+        /* offline */
+      }
+    };
+
+    // 1. Try Pusher if configured
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "ap1";
+
+    if (pusherKey) {
+      try {
+        pusher = new Pusher(pusherKey, { cluster: pusherCluster });
+        const channel = pusher.subscribe("estaka-live");
+        channel.bind("rev", (data: { rev: number }) => {
+          if (!dead && data?.rev) onRevChange(data.rev);
+        });
+      } catch (err) {
+        console.error("[realtime] Pusher init error, falling back to SSE:", err);
+      }
+    }
+
+    // 2. Native Server-Sent Events (SSE) Push if Pusher is not configured
+    const setupSse = () => {
+      if (pusher || dead || typeof window === "undefined" || !window.EventSource) return;
+      if (document.visibilityState !== "visible") return;
+
+      try {
+        es = new EventSource("/api/realtime");
+
+        es.addEventListener("init", (e) => {
+          try {
+            const data = JSON.parse(e.data) as { rev?: number };
+            if (typeof data.rev === "number") rev.current = data.rev;
+          } catch {
+            /* ignore */
+          }
+        });
+
+        es.addEventListener("rev", (e) => {
+          try {
+            const data = JSON.parse(e.data) as { rev?: number };
+            if (typeof data.rev === "number") onRevChange(data.rev);
+          } catch {
+            /* ignore */
+          }
+        });
+
+        es.onerror = () => {
+          // If SSE encounters an error (e.g. network blip or auth expired), close and schedule safe reconnect
+          if (es) {
+            es.close();
+            es = null;
+          }
+          if (!dead) {
+            clearTimeout(fallbackTimer);
+            fallbackTimer = setTimeout(setupSse, 10_000);
+          }
+        };
+      } catch {
+        // SSE not supported or blocked
+      }
+    };
+
+    if (!pusher) {
+      setupSse();
+    }
+
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        clearTimeout(timer);
-        void tick();
+        void poke(); // Catch up on any changes missed while tab was hidden
+        if (!pusher && !es) setupSse();
+      } else {
+        if (es) {
+          es.close();
+          es = null;
+        }
       }
     };
-    const poke = () => {
-      clearTimeout(timer);
-      timer = setTimeout(tick, 150);
-    };
-    timer = setTimeout(tick, 0);
+
     window.addEventListener("estaka:poke", poke);
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("pointerdown", touch, { passive: true });
-    window.addEventListener("keydown", touch);
+
     return () => {
       dead = true;
-      clearTimeout(timer);
+      if (es) {
+        es.close();
+        es = null;
+      }
+      if (pusher) {
+        pusher.unsubscribe("estaka-live");
+        pusher.disconnect();
+        pusher = null;
+      }
+      clearTimeout(fallbackTimer);
       window.removeEventListener("estaka:poke", poke);
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("pointerdown", touch);
-      window.removeEventListener("keydown", touch);
     };
   }, [router]);
 
