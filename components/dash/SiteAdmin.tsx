@@ -62,7 +62,7 @@ function Rows<T extends { id: string }>({ items, onChange, make, empty, addLabel
 
 /** Superadmin editor for landing content: team, results, testimonials, map/contact and the WhatsApp reminder template. */
 export default function SiteAdmin() {
-  const [site, setSite] = useState<SiteContent | null>(null);
+  const [site, setSite] = useState<SiteContent | null>(() => api.getCache<{ site: SiteContent }>("/api/site")?.site ?? null);
   const [tab, setTab] = useState("team");
   const [state, setState] = useState<"" | "saving" | "saved" | "error">("");
   const [dirty, setDirty] = useState(false);

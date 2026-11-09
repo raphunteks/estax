@@ -57,10 +57,10 @@ function PromoForm({ init, id, canActivate, tariffs, onDone, onCancel }: { init:
 }
 
 export default function Promos() {
-  const [rows, setRows] = useState<Promo[] | null>(null);
-  const [canActivate, setCan] = useState(false);
-  const [me, setMe] = useState("");
-  const [tariffs, setTariffs] = useState<Tariff[]>([]);
+  const [rows, setRows] = useState<Promo[] | null>(() => api.getCache<{ promos: Promo[] }>("/api/promos")?.promos ?? null);
+  const [canActivate, setCan] = useState(() => Boolean(api.getCache<{ canActivate: boolean }>("/api/promos")?.canActivate));
+  const [me, setMe] = useState(() => api.getCache<{ me: string }>("/api/promos")?.me ?? "");
+  const [tariffs, setTariffs] = useState<Tariff[]>(() => api.getCache<{ tariffs: Tariff[] }>("/api/billing/tariffs")?.tariffs ?? []);
   const [edit, setEdit] = useState<{ id?: string; init: ReturnType<typeof blank> } | null>(null);
   const [msg, setMsg] = useState("");
   const load = useCallback(async () => {

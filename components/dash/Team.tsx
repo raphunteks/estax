@@ -13,9 +13,9 @@ const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const ROLE_LABEL: Record<string, string> = { superadmin: "Superadmin", dokter: "Dokter", staf: "Staf", apoteker: "Apoteker", pasien: "Pasien" };
 
 function Users() {
-  const [rows, setRows] = useState<U[] | null>(null);
-  const [manageable, setManageable] = useState<string[]>([]);
-  const [me, setMe] = useState("");
+  const [rows, setRows] = useState<U[] | null>(() => api.getCache<{ users: U[] }>("/api/team/users")?.users ?? null);
+  const [manageable, setManageable] = useState<string[]>(() => api.getCache<{ manageable: string[] }>("/api/team/users")?.manageable ?? []);
+  const [me, setMe] = useState(() => api.getCache<{ me: string }>("/api/team/users")?.me ?? "");
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
   const [f, setF] = useState({ email: "", name: "", role: "", subRole: "perawat" });

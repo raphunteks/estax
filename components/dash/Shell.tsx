@@ -11,9 +11,19 @@ import BottomNav from "./BottomNav";
 import { api } from "./kit";
 
 const PREFETCH_API: Record<string, string> = {
-  "/dashboard/analitik": "/api/analytics?days=30",
+  "/dashboard/pasien": "/api/patients?q=",
+  "/dashboard/janji": "/api/appointments",
+  "/dashboard/periksa": "/api/visits",
   "/dashboard/kasir": "/api/billing/invoices?status=belum,sebagian",
   "/dashboard/farmasi": "/api/pharmacy/items",
+  "/dashboard/promosi": "/api/promos",
+  "/dashboard/pesan": "/api/chat",
+  "/dashboard/recall": "/api/recall",
+  "/dashboard/survei": "/api/survey",
+  "/dashboard/analitik": "/api/analytics?days=30",
+  "/dashboard/tim": "/api/team/users",
+  "/dashboard/situs": "/api/site",
+  "/dashboard/pengaturan": "/api/master/rules",
 };
 
 const ICONS: Record<string, LucideIcon> = { home: Home, users: Users, calendar: CalendarDays, tooth: Stethoscope, wallet: Wallet, pill: Pill, chart: BarChart3, spark: Sparkles, shield: ShieldCheck, cog: Cog, log: ScrollText, globe: Globe, user: User, tag: Tag, chat: MessageCircle, star: Star };

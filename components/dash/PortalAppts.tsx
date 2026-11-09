@@ -41,7 +41,7 @@ function Change({ a, onDone }: { a: A; onDone: () => void }) {
 }
 
 export default function PortalAppts({ noPatient }: { noPatient: boolean }) {
-  const [rows, setRows] = useState<A[] | null>(null);
+  const [rows, setRows] = useState<A[] | null>(() => api.getCache<{ appointments: A[] }>("/api/appointments/mine")?.appointments ?? null);
   const [showNew, setShowNew] = useState(false);
   const [change, setChange] = useState("");
   const [msg, setMsg] = useState("");

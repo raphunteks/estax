@@ -6,7 +6,7 @@ import { InvBadge, rp } from "./Billing";
 
 type B = { id: string; no: string; date: string; items: { id: string; name: string; qty: number; price: number }[]; discount: number; total: number; paid: number; due: number; status: string; payments: { at: number; amount: number; method: string }[] };
 export default function PortalBills() {
-  const [rows, setRows] = useState<B[] | null>(null);
+  const [rows, setRows] = useState<B[] | null>(() => api.getCache<{ invoices: B[] }>("/api/portal/tagihan")?.invoices ?? null);
   useEffect(() => {
     const t = setTimeout(() => void api<{ invoices: B[] }>("/api/portal/tagihan").then((r) => setRows(r.ok ? r.invoices : [])), 0);
     return () => clearTimeout(t);

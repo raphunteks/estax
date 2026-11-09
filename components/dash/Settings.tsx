@@ -9,7 +9,7 @@ type Rules = { monthlyTarget: number; cancelHoursBefore: number; maxActiveBookin
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
 
 function useMaster<T>(kind: string) {
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<T | null>(() => (api.getCache<{ data: T }>(`/api/master/${kind}`)?.data as unknown as T) ?? null);
   const [msg, setMsg] = useState("");
   useEffect(() => void api<{ data: T }>(`/api/master/${kind}`).then((d) => d.ok && setData(d.data)), [kind]);
   const save = async () => {

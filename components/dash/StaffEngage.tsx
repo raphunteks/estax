@@ -29,7 +29,7 @@ export function StaffChat() {
 
 type S = { count: number; avg: number; dist: number[]; rows: { id: string; rating: number; comment?: string; t: number; doctor?: string }[] };
 export function StaffSurvey() {
-  const [d, setD] = useState<S | null>(null);
+  const [d, setD] = useState<S | null>(() => (api.getCache<S>("/api/survey") as unknown as S) ?? null);
   useEffect(() => void api<S>("/api/survey").then((r) => setD(r.ok ? r : null)), []);
   if (!d) return <Skeleton />;
   const max = Math.max(1, ...d.dist);
@@ -47,7 +47,7 @@ export function StaffSurvey() {
 
 type R = { visitId: string; patientName: string; rmNo: string | null; name: string; date: string; note?: string; remindedAt?: number; overdue: boolean };
 export function StaffRecall() {
-  const [rows, setRows] = useState<R[] | null>(null);
+  const [rows, setRows] = useState<R[] | null>(() => api.getCache<{ rows: R[] }>("/api/recall")?.rows ?? null);
   const [msg, setMsg] = useState("");
   const load = useCallback(() => void api<{ rows: R[] }>("/api/recall").then((r) => setRows(r.ok ? r.rows : [])), []);
   useEffect(() => { const t = setTimeout(load, 0); return () => clearTimeout(t); }, [load]);

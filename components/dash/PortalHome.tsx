@@ -38,7 +38,7 @@ function Action({ href, icon: I, c, label, badge }: { href: string; icon: Lucide
 }
 
 export default function PortalHome({ name, userId, photo }: { name: string; userId: string; photo?: string }) {
-  const [d, setD] = useState<Home | null>(null);
+  const [d, setD] = useState<Home | null>(() => (api.getCache<Home>("/api/portal/ringkasan") as unknown as Home) ?? null);
   const [arrMsg, setArrMsg] = useState("");
   const load = () => void api<Home>("/api/portal/ringkasan").then((r) => setD(r.ok ? (r as unknown as Home) : { patient: null, items: [] }));
   async function arrive(id: string) {

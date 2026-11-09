@@ -12,7 +12,7 @@ type R = {
 
 /** Patient's own history: finished visits and a read-only odontogram. */
 export default function PortalHistory() {
-  const [d, setD] = useState<R | null>(null);
+  const [d, setD] = useState<R | null>(() => (api.getCache<R>("/api/portal/riwayat") as unknown as R) ?? null);
   useEffect(() => {
     const t = setTimeout(() => void api<R>("/api/portal/riwayat").then((r) => setD(r.ok ? (r as unknown as R) : { odo: null, visits: [] })), 0);
     return () => clearTimeout(t);

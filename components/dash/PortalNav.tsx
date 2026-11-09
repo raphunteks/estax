@@ -4,6 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
 import ThemeMenu from "@/components/ThemeMenu";
+import { api } from "./kit";
+
+const PORTAL_PREFETCH: Record<string, string> = {
+  "/portal": "/api/portal/ringkasan",
+  "/portal/janji": "/api/appointments/mine",
+  "/portal/riwayat": "/api/portal/riwayat",
+  "/portal/tagihan": "/api/portal/tagihan",
+};
 
 const ITEMS: [string, string, boolean][] = [
   ["/portal", "Ringkasan", true],
@@ -29,7 +37,22 @@ export default function PortalNav({ locked }: { locked: boolean }) {
         <nav aria-label="Portal" className="hidden flex-1 gap-1 overflow-x-auto md:flex">
           {ITEMS.map(([href, label, live]) =>
             live && !(locked && href !== "/portal/akun") ? (
-              <Link key={label} href={href} aria-current={path === href ? "page" : undefined} className={`inline-flex min-h-10 shrink-0 items-center rounded-lg px-3 text-sm transition-[background-color,color,transform] duration-150 active:scale-[0.97] ${path === href ? "bg-accent/15 text-accent" : "text-muted hover:text-fg"}`}>{label}</Link>
+              <Link
+                key={label}
+                href={href}
+                aria-current={path === href ? "page" : undefined}
+                onPointerEnter={() => {
+                  const p = PORTAL_PREFETCH[href];
+                  if (p) api.prefetch(p);
+                }}
+                onTouchStart={() => {
+                  const p = PORTAL_PREFETCH[href];
+                  if (p) api.prefetch(p);
+                }}
+                className={`inline-flex min-h-10 shrink-0 items-center rounded-lg px-3 text-sm transition-[background-color,color,transform] duration-150 active:scale-[0.97] ${path === href ? "bg-accent/15 text-accent" : "text-muted hover:text-fg"}`}
+              >
+                {label}
+              </Link>
             ) : (
               <span key={label} aria-disabled="true" className="inline-flex min-h-10 shrink-0 cursor-not-allowed items-center rounded-lg px-3 text-sm opacity-45">{label}</span>
             ),
