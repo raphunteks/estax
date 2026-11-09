@@ -4,22 +4,49 @@ import { useId, useState } from "react";
 import { inputCls } from "@/components/auth/ui";
 
 export type ApiRes<T = unknown> = { ok: boolean; code?: string; message?: string } & T;
-/** GETs are de-duplicated while in flight and reused for a few seconds, so revisiting a page paints instantly; any write clears the cache. */
-const hot = new Map<string, { at: number; p: Promise<unknown> }>();
-const TTL = 5000;
-// A live-sync change means any reused GET may be outdated: drop it so widgets refetch real data. Registered at import, so it runs before widget listeners.
-if (typeof window !== "undefined") window.addEventListener("estaka:rev", () => hot.clear());
+
+type CacheItem<T = unknown> = { at: number; p: Promise<ApiRes<T>>; data?: ApiRes<T> };
+const hot = new Map<string, CacheItem>();
+// Long TTL: 5 minutes (300,000ms). Realtime invalidation via "estaka:rev" (Pusher / SSE) clears this instantly when any data changes.
+const TTL = 300_000;
+
+// A live-sync change means any reused GET may be outdated: drop it so widgets refetch real data.
+if (typeof window !== "undefined") {
+  window.addEventListener("estaka:rev", () => hot.clear());
+}
 const NO_CACHE = /^\/api\/(visits\/|ai|auth|admin)/;
-export async function api<T = unknown>(url: string, method = "GET", body?: unknown): Promise<ApiRes<T>> {
+
+export interface ApiFunction {
+  <T = unknown>(url: string, method?: string, body?: unknown): Promise<ApiRes<T>>;
+  getCache<T = unknown>(url: string): ApiRes<T> | undefined;
+  prefetch(url: string): void;
+  clearCache(): void;
+}
+
+const apiImpl = async function <T = unknown>(url: string, method = "GET", body?: unknown): Promise<ApiRes<T>> {
   const get = method === "GET" && !NO_CACHE.test(url);
   if (get) {
     const h = hot.get(url);
-    if (h && Date.now() - h.at < TTL) return h.p as Promise<ApiRes<T>>;
-  } else if (method !== "GET") hot.clear();
+    if (h && Date.now() - h.at < TTL) {
+      if (h.data) return h.data as ApiRes<T>;
+      return h.p as Promise<ApiRes<T>>;
+    }
+  } else if (method !== "GET") {
+    hot.clear();
+  }
+
   const p = (async () => {
     try {
-      const r = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
+      const r = await fetch(url, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+      });
       const res = (await r.json()) as ApiRes<T>;
+      if (get && res && (res as { ok?: boolean }).ok) {
+        const item = hot.get(url);
+        if (item) item.data = res;
+      }
       // Own write: ask LiveSync to check the revision right now instead of waiting for its next tick.
       if (method !== "GET" && res.ok) window.dispatchEvent(new Event("estaka:poke"));
       return res;
@@ -27,12 +54,35 @@ export async function api<T = unknown>(url: string, method = "GET", body?: unkno
       return { ok: false, code: "network", message: "Koneksi bermasalah." } as ApiRes<T>;
     }
   })();
+
   if (get) {
     hot.set(url, { at: Date.now(), p });
-    void p.then((r) => { if (!r.ok) hot.delete(url); });
+    void p.then((r) => {
+      if (!r.ok) hot.delete(url);
+    });
   }
   return p;
-}
+};
+
+apiImpl.getCache = <T = unknown>(url: string): ApiRes<T> | undefined => {
+  const h = hot.get(url);
+  if (h && Date.now() - h.at < TTL && h.data && h.data.ok) {
+    return h.data as ApiRes<T>;
+  }
+  return undefined;
+};
+
+apiImpl.prefetch = (url: string) => {
+  if (!NO_CACHE.test(url) && !apiImpl.getCache(url)) {
+    void apiImpl(url);
+  }
+};
+
+apiImpl.clearCache = () => {
+  hot.clear();
+};
+
+export const api: ApiFunction = apiImpl as unknown as ApiFunction;
 
 export const Card = ({ title, children, right }: { title?: string; children: React.ReactNode; right?: React.ReactNode }) => (
   <section className="glass rounded-2xl p-5 sm:p-6">

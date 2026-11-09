@@ -8,6 +8,13 @@ import { Activity, CalendarDays, ChevronDown, Cog, Globe, Home, Lock, LogOut, Pa
 import { gsap, useGSAP } from "@/lib/gsap";
 import Logo from "@/components/Logo";
 import BottomNav from "./BottomNav";
+import { api } from "./kit";
+
+const PREFETCH_API: Record<string, string> = {
+  "/dashboard/analitik": "/api/analytics?days=30",
+  "/dashboard/kasir": "/api/billing/invoices?status=belum,sebagian",
+  "/dashboard/farmasi": "/api/pharmacy/items",
+};
 
 const ICONS: Record<string, LucideIcon> = { home: Home, users: Users, calendar: CalendarDays, tooth: Stethoscope, wallet: Wallet, pill: Pill, chart: BarChart3, spark: Sparkles, shield: ShieldCheck, cog: Cog, log: ScrollText, globe: Globe, user: User, tag: Tag, chat: MessageCircle, star: Star };
 export type SideItem = { href: string; label: string; icon: string; soon: boolean; group: string };
@@ -120,8 +127,20 @@ export default function Shell({ items, user, locked, children }: { items: SideIt
                         key={i.href}
                         href={gated ? "/dashboard/akun" : i.href}
                         onClick={() => setOpen(false)}
-                        onPointerEnter={() => !gated && router.prefetch(i.href)}
-                        onTouchStart={() => !gated && router.prefetch(i.href)}
+                        onPointerEnter={() => {
+                          if (!gated) {
+                            router.prefetch(i.href);
+                            const apiPath = PREFETCH_API[i.href];
+                            if (apiPath) api.prefetch(apiPath);
+                          }
+                        }}
+                        onTouchStart={() => {
+                          if (!gated) {
+                            router.prefetch(i.href);
+                            const apiPath = PREFETCH_API[i.href];
+                            if (apiPath) api.prefetch(apiPath);
+                          }
+                        }}
                         title={gated ? "Selesaikan langkah keamanan di Akun saya dulu" : rail ? i.label : undefined}
                         aria-label={rail ? i.label : undefined}
                         aria-current={active ? "page" : undefined}

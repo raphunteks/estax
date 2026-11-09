@@ -141,16 +141,23 @@ function Pharm({ d }: { d: NonNullable<D["pharmacy"]> }) {
 
 export default function Analytics() {
   const [days, setDays] = useState(30);
-  const [d, setD] = useState<D | null>(null);
+  const [d, setD] = useState<D | null>(() => {
+    const c = api.getCache<D>(`/api/analytics?days=30`);
+    return c && c.ok ? (c as unknown as D) : null;
+  });
   const [err, setErr] = useState("");
-  const [tab, setTab] = useState("");
+  const [tab, setTab] = useState(() => {
+    const c = api.getCache<D>(`/api/analytics?days=30`);
+    return c && (c as unknown as D).sections ? (c as unknown as D).sections[0] : "";
+  });
   useEffect(() => {
     let live = true;
     const t = setTimeout(async () => {
       const r = await api<D>(`/api/analytics?days=${days}`);
       if (!live) return;
       if (!r.ok) return setErr(r.message ?? "Gagal memuat analitik.");
-      setErr(""); setD(r as unknown as D);
+      setErr("");
+      setD(r as unknown as D);
       setTab((cur) => ((r as unknown as D).sections.includes(cur) ? cur : (r as unknown as D).sections[0]));
     }, 0);
     return () => { live = false; clearTimeout(t); };

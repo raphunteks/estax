@@ -109,8 +109,11 @@ function Detail({ id, isSuper, onChange, onClose }: { id: string; isSuper: boole
 }
 
 function List({ canWrite, isSuper }: { canWrite: boolean; isSuper: boolean }) {
-  const [rows, setRows] = useState<Inv[] | null>(null);
   const [st, setSt] = useState("belum,sebagian");
+  const [rows, setRows] = useState<Inv[] | null>(() => {
+    const c = api.getCache<{ invoices: Inv[] }>(`/api/billing/invoices?status=belum,sebagian`);
+    return c && c.ok ? c.invoices : null;
+  });
   const [open, setOpen] = useState("");
   const load = useCallback(async () => {
     const r = await api<{ invoices: Inv[] }>(`/api/billing/invoices?status=${st}`);

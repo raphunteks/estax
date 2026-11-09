@@ -3,6 +3,7 @@ import { fail, isResponse, json, requirePerm } from "@/lib/api";
 import { audit } from "@/lib/auth/guards";
 import { due, invoiceFromVisit, listInvoices, paid, total, type Invoice } from "@/lib/clinic/billing";
 import { getPatient } from "@/lib/clinic/patients";
+import { currentRev, db } from "@/lib/db/store";
 
 export async function present(list: Invoice[]) {
   const cache = new Map<string, { name: string; rmNo: string | null }>();
@@ -18,7 +19,25 @@ export async function GET(req: Request) {
   const a = await requirePerm("billing:read");
   if (isResponse(a)) return a;
   const u = new URL(req.url).searchParams;
-  return json({ ok: true, invoices: await present(await listInvoices({ status: u.get("status") ?? undefined, patientId: u.get("patientId") ?? undefined })) });
+  const st = u.get("status") ?? "all";
+  const pid = u.get("patientId") ?? "all";
+
+  const rev = await currentRev();
+  const cacheKey = `cache:invoices:${st}:${pid}:${rev}`;
+  try {
+    const cached = await db().get<unknown[]>(cacheKey);
+    if (cached) return json({ ok: true, invoices: cached, fromCache: true });
+  } catch {
+    /* fallback */
+  }
+
+  const invoices = await present(await listInvoices({ status: u.get("status") ?? undefined, patientId: u.get("patientId") ?? undefined }));
+  try {
+    await db().set(cacheKey, invoices, { ex: 3600 });
+  } catch {
+    /* ignore */
+  }
+  return json({ ok: true, invoices });
 }
 
 /** Create (or return) the invoice of a finished visit; normally this already happened when the doctor finished it. */

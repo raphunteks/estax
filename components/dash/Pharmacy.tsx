@@ -63,8 +63,14 @@ function Row({ it, onDone }: { it: It; onDone: () => void }) {
 }
 
 function Stock() {
-  const [items, setItems] = useState<It[] | null>(null);
-  const [canCreate, setCanCreate] = useState(false);
+  const [items, setItems] = useState<It[] | null>(() => {
+    const c = api.getCache<{ items: It[]; canCreate: boolean }>("/api/pharmacy/items");
+    return c && c.ok ? c.items : null;
+  });
+  const [canCreate, setCanCreate] = useState(() => {
+    const c = api.getCache<{ items: It[]; canCreate: boolean }>("/api/pharmacy/items");
+    return Boolean(c && c.ok && c.canCreate);
+  });
   const [q, setQ] = useState("");
   const [add, setAdd] = useState(false);
   const [f, setF] = useState({ name: "", kind: "obat", unit: "tablet", min: 10 });
