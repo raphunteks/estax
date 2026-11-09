@@ -3,7 +3,7 @@
 import ThemeMenu from "@/components/ThemeMenu";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Activity, CalendarDays, ChevronDown, Cog, Globe, Home, Lock, LogOut, PanelLeftClose, PanelLeftOpen, ScrollText, ShieldCheck, Tag, MessageCircle, Star, Sparkles, Stethoscope, User, Users, Wallet, Pill, BarChart3, X, type LucideIcon } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import Logo from "@/components/Logo";
@@ -30,6 +30,7 @@ const write = (k: string, v: string) => {
 
 export default function Shell({ items, user, locked, children }: { items: SideItem[]; user: { id: string; name: string; role: string; email: string; photo?: string }; locked: boolean; children: React.ReactNode }) {
   const path = usePathname();
+  const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const rail = useSyncExternalStore(sub, () => read("rail") === "1", () => false);
@@ -119,6 +120,8 @@ export default function Shell({ items, user, locked, children }: { items: SideIt
                         key={i.href}
                         href={gated ? "/dashboard/akun" : i.href}
                         onClick={() => setOpen(false)}
+                        onPointerEnter={() => !gated && router.prefetch(i.href)}
+                        onTouchStart={() => !gated && router.prefetch(i.href)}
                         title={gated ? "Selesaikan langkah keamanan di Akun saya dulu" : rail ? i.label : undefined}
                         aria-label={rail ? i.label : undefined}
                         aria-current={active ? "page" : undefined}

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import LiveSync from "@/components/dash/LiveSync";
 import PushPrompt from "@/components/dash/PushPrompt";
 import Shell from "@/components/dash/Shell";
 import { getAuth } from "@/lib/auth/session";
@@ -27,6 +28,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
   return (
     <Shell items={items} user={{ id: user.id, photo: user.photo, name: user.name, role: user.role, email: user.email }} locked={locked}>
       {!locked && <PushPrompt uid={user.id} />}
+      {!locked && <LiveSync />}
       {children}
     </Shell>
   );

@@ -190,13 +190,55 @@ function upstashStore(r: Redis): Store {
 }
 
 let store: Store | null = null;
+
+/** Keys that never change anything a user can see (sessions, one-time tokens, passkey challenges). */
+const QUIET = ["session:", "user:sessions:", "verify:", "reset:", "totp:", "pkc:", "sys:"];
+const loud = (k: string) => !QUIET.some((p) => k.startsWith(p));
+
+/**
+ * Wraps a store so every visible write bumps one counter (`sys:rev`) AFTER the write lands.
+ * Clients poll that single number and refresh only when it moves, so the UI stays current without per-screen polling.
+ * Ephemeral writes (TTL set, or QUIET prefixes) are ignored so logins and rate limits do not trigger refreshes.
+ */
+function withRev(s: Store): Store {
+  const bump = () => s.incr("sys:rev").then(() => undefined, () => undefined);
+  return {
+    ...s,
+    async set(k, v, o) {
+      const ok = await s.set(k, v, o);
+      if (ok && !o?.ex && loud(k)) await bump();
+      return ok;
+    },
+    async del(...k) {
+      await s.del(...k);
+      if (k.some(loud)) await bump();
+    },
+    async sadd(k, ...m) {
+      await s.sadd(k, ...m);
+      if (loud(k)) await bump();
+    },
+    async srem(k, ...m) {
+      await s.srem(k, ...m);
+      if (loud(k)) await bump();
+    },
+    async lpush(k, v) {
+      await s.lpush(k, v);
+      if (loud(k)) await bump();
+    },
+  };
+}
+
+/** Current data revision; a cheap single-key read used by the live-sync endpoint. */
+export async function currentRev(): Promise<number> {
+  return Number((await db().get<number | string>("sys:rev")) ?? 0);
+}
+
 export function db(): Store {
   if (store) return store;
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (url && token) store = upstashStore(new Redis({ url, token }));
+  if (url && token) store = withRev(upstashStore(new Redis({ url, token })));
   else if (process.env.NODE_ENV === "production") throw new Error("UPSTASH_REDIS_REST_URL/TOKEN are required in production");
-  else store = memoryStore();
+  else store = withRev(memoryStore());
   return store;
 }
-export const isDevStore = () => !(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);

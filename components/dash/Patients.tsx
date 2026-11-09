@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { LIVE_EVENT, peek, remember } from "@/lib/live";
 import Link from "next/link";
 import { ApptActions, type A } from "./Appointments";
 import { VisitHistory } from "./Exam";
@@ -10,12 +11,23 @@ type P = { id: string; name: string; rmNo: string | null; status: string; phone:
 
 export function PatientList({ canCreate }: { canCreate: boolean }) {
   const [q, setQ] = useState("");
-  const [rows, setRows] = useState<P[] | null>(null);
+  const [rows, setRows] = useState<P[] | null>(() => peek<P[]>("patients:"));
   const [err, setErr] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => void api<{ patients: P[] }>(`/api/patients?q=${encodeURIComponent(q)}`).then((d) => (d.ok ? (setRows(d.patients), setErr(false)) : setErr(true))), q ? 250 : 0);
-    return () => clearTimeout(t);
+  const load = useCallback(async () => {
+    const d = await api<{ patients: P[] }>(`/api/patients?q=${encodeURIComponent(q)}`);
+    if (d.ok) (remember(`patients:${q}`, d.patients), setRows(d.patients), setErr(false));
+    else setErr(true);
   }, [q]);
+  // Typing waits 250 ms; mount and live changes load at once. An empty search shows the cached list immediately.
+  useEffect(() => {
+    const t = setTimeout(() => void load(), q ? 250 : 0);
+    return () => clearTimeout(t);
+  }, [load, q]);
+  useEffect(() => {
+    const on = () => void load();
+    window.addEventListener(LIVE_EVENT, on);
+    return () => window.removeEventListener(LIVE_EVENT, on);
+  }, [load]);
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

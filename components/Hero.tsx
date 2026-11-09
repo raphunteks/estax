@@ -37,14 +37,20 @@ export default function Hero() {
   const [room, setRoom] = useState(false);
 
   useEffect(() => {
-    if (!roomCapable()) return;
+    // Decide once on mount; a visitor who is already scrolling keeps the static hero (no late pin jump).
+    if (!roomCapable() || window.scrollY > 40) return;
     wantsRoom.current = true;
-    setRoom(true);
+    // Warm the chunk immediately so the swap is near-instant and the static hero shows only for a blink.
+    void import("./hero3d/HeroRoom");
+    const go = () => setRoom(true);
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 600 });
+    else setTimeout(go, 200);
   }, []);
 
   useLazyGsap(root, ({ gsap, MOTION_OK, FINE_POINTER }) => {
     // The 3D room owns the hero's scroll choreography; the static parallax only runs without it.
-    if (wantsRoom.current || room) return;
+    if (wantsRoom.current) return;
     {
       const mm = gsap.matchMedia();
 
@@ -91,7 +97,7 @@ export default function Hero() {
   });
 
   return (
-    <section id="top" ref={root} data-room={room ? "on" : undefined} className="group relative flex h-dvh min-h-dvh items-start pt-24 overflow-hidden lg:items-center lg:pt-[72px]">
+    <section id="top" ref={root} data-room={room ? "on" : undefined} className="group relative flex min-h-dvh items-center overflow-hidden pt-[72px] data-[room=on]:h-dvh data-[room=on]:items-start data-[room=on]:pt-24 lg:data-[room=on]:items-center lg:data-[room=on]:pt-[72px]">
       {room && <HeroRoom section={root} />}
       <div className="pointer-events-none absolute inset-0 -z-10 group-data-[room=on]:hidden" aria-hidden="true">
         <div className="h-glow glow-pulse absolute -right-32 top-1/4 size-[640px] rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, var(--glow), transparent)" }} />

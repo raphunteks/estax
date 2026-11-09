@@ -5,7 +5,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BellRing, CalendarDays, ClipboardList, Ellipsis, House, LogOut, Package, Search, Stethoscope, UserCheck, Users, Wallet, ChartColumn, X, type LucideIcon } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
+import { peek, remember, sharedGet, useOnLive } from "@/lib/live";
 import { api } from "./kit";
+
+const MOBILE = "/api/dash/mobile";
 
 type Item = { href: string; label: string; icon: string; soon: boolean; group: string };
 type Data = {
@@ -91,19 +94,14 @@ export default function BottomNav({ role, locked, items, icons }: { role: string
   const path = usePathname();
   const sp = useSearchParams();
   const router = useRouter();
-  const [data, setData] = useState<Data | null>(null);
+  const [data, setData] = useState<Data | null>(() => peek<Data>(MOBILE));
   const [sheet, setSheet] = useState<"" | "more" | "checkin" | "search">("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
   const cfg = CONFIG[role];
   const allowed = useCallback((h: string) => items.some((i) => i.href === base(h)), [items]);
-  const load = useCallback(() => void api<Data>("/api/dash/mobile").then((r) => r.ok && setData(r as unknown as Data)), []);
-  useEffect(() => {
-    if (locked || !cfg) return;
-    const t = setTimeout(load, 0);
-    const i = setInterval(() => document.visibilityState === "visible" && load(), 10000);
-    return () => (clearTimeout(t), clearInterval(i));
-  }, [load, locked, cfg]);
+  const load = useCallback(() => void sharedGet(MOBILE, () => api<Data>(MOBILE)).then((r) => { if (r.ok) { remember(MOBILE, r); setData(r as unknown as Data); } }), []);
+  useOnLive(load, 60000, !locked && !!cfg);
   const close = useCallback(() => setSheet(""), []);
   if (!cfg) return null;
 
@@ -140,7 +138,7 @@ export default function BottomNav({ role, locked, items, icons }: { role: string
     const off = locked || !allowed(s.href);
     return (
       <li key={s.href}>
-        <Link href={off ? "#" : s.href} aria-current={isOn(s.href) ? "page" : undefined} aria-disabled={off || undefined} className={cls(isOn(s.href), off)}>
+        <Link href={off ? "#" : s.href} onTouchStart={() => !off && router.prefetch(s.href)} aria-current={isOn(s.href) ? "page" : undefined} aria-disabled={off || undefined} className={cls(isOn(s.href), off)}>
           <s.Icon size={22} aria-hidden="true" /><span>{s.label}</span>{dot(badge(s.href))}
         </Link>
       </li>

@@ -7,6 +7,8 @@ export type ApiRes<T = unknown> = { ok: boolean; code?: string; message?: string
 /** GETs are de-duplicated while in flight and reused for a few seconds, so revisiting a page paints instantly; any write clears the cache. */
 const hot = new Map<string, { at: number; p: Promise<unknown> }>();
 const TTL = 5000;
+// A live-sync change means any reused GET may be outdated: drop it so widgets refetch real data. Registered at import, so it runs before widget listeners.
+if (typeof window !== "undefined") window.addEventListener("estaka:rev", () => hot.clear());
 const NO_CACHE = /^\/api\/(visits\/|ai|auth|admin)/;
 export async function api<T = unknown>(url: string, method = "GET", body?: unknown): Promise<ApiRes<T>> {
   const get = method === "GET" && !NO_CACHE.test(url);
@@ -17,7 +19,10 @@ export async function api<T = unknown>(url: string, method = "GET", body?: unkno
   const p = (async () => {
     try {
       const r = await fetch(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
-      return (await r.json()) as ApiRes<T>;
+      const res = (await r.json()) as ApiRes<T>;
+      // Own write: ask LiveSync to check the revision right now instead of waiting for its next tick.
+      if (method !== "GET" && res.ok) window.dispatchEvent(new Event("estaka:poke"));
+      return res;
     } catch {
       return { ok: false, code: "network", message: "Koneksi bermasalah." } as ApiRes<T>;
     }

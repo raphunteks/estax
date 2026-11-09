@@ -5,6 +5,7 @@ import { BookingForm, SlotPicker } from "./Booking";
 import { fillWa } from "@/lib/site-helpers";
 import { waPhone } from "@/lib/wa";
 import { Badge, Card, Empty, Field, Input, Select, Skeleton, StatusBadge, Tabs, addD, api, fmtDate, witaToday } from "./kit";
+import { peek, remember, useOnLive } from "@/lib/live";
 
 export type A = { id: string; patientId: string; patientName: string; rmNo: string | null; doctorId: string; doctorName: string; date: string; time: string; endTime: string; status: string; complaint?: string; queueNo?: number; checkInAt?: number; calledAt?: number; payTypeId: string };
 type Role = "superadmin" | "dokter" | "staf";
@@ -73,16 +74,15 @@ const Row = ({ a, children }: { a: A; children?: React.ReactNode }) => (
 );
 
 function useAppts(query: string) {
-  const [rows, setRows] = useState<A[] | null>(null);
+  const key = `appts:${query}`;
+  const [rows, setRows] = useState<A[] | null>(() => peek<A[]>(key));
   const [err, setErr] = useState(false);
   const load = useCallback(async () => {
     const d = await api<{ appointments: A[] }>(`/api/appointments?${query}`);
-    d.ok ? (setRows(d.appointments), setErr(false)) : setErr(true);
-  }, [query]);
-  useEffect(() => {
-    const t = setTimeout(load, 0);
-    return () => clearTimeout(t);
-  }, [load]);
+    if (d.ok) (remember(key, d.appointments), setRows(d.appointments), setErr(false));
+    else setErr(true);
+  }, [query, key]);
+  useOnLive(load, 60000);
   return { rows, err, load };
 }
 
@@ -187,11 +187,9 @@ function Queue({ role, userId }: { role: Role; userId: string }) {
   const [now, setNow] = useState(0);
   useEffect(() => {
     const t0 = setTimeout(() => setNow(Date.now()), 0);
-    const t = setInterval(() => {
-      if (document.visibilityState === "visible") (void load(), setNow(Date.now()));
-    }, 15000);
+    const t = setInterval(() => document.visibilityState === "visible" && setNow(Date.now()), 15000);
     return () => (clearTimeout(t0), clearInterval(t));
-  }, [load]);
+  }, []);
   if (err) return <p className="text-sm text-red-400">Gagal memuat antrian.</p>;
   if (!rows) return <Skeleton />;
   const live = rows.filter((a) => !a.status.startsWith("batal") && a.status !== "tidak_hadir");

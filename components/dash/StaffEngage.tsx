@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { peek, remember, useOnLive } from "@/lib/live";
 import { Badge, Empty, Skeleton, api, fmtDate } from "./kit";
 import { ChatBox } from "./PortalServices";
 
 type T = { patientId: string; name: string; rmNo: string | null; last: { t: number; text: string }; unread: boolean };
 export function StaffChat() {
-  const [th, setTh] = useState<T[] | null>(null);
+  const [th, setTh] = useState<T[] | null>(() => peek<T[]>("staff-chat"));
   const [sel, setSel] = useState("");
-  const load = useCallback(() => void api<{ threads: T[] }>("/api/chat").then((r) => setTh(r.ok ? r.threads : [])), []);
-  useEffect(() => { const t = setTimeout(load, 0); const i = setInterval(load, 20000); return () => { clearTimeout(t); clearInterval(i); }; }, [load]);
+  const load = useCallback(() => void api<{ threads: T[] }>("/api/chat").then((r) => { const next = r.ok ? r.threads : []; remember("staff-chat", next); setTh(next); }), []);
+  useOnLive(load, 60000);
   return (
     <div>
       <h1 className="display mb-6 text-3xl">Pesan pasien</h1>

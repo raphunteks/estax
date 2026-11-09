@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Activity, BarChart3, CalendarDays, ChevronRight, ClipboardCheck, Cog, Globe, MessageCircle, Package, Pill, ScrollText, ShieldCheck, Sparkles, Star, Stethoscope, Tag, Users, Wallet, type LucideIcon } from "lucide-react";
+import { peek, remember, sharedGet, useOnLive } from "@/lib/live";
 import { Skeleton, api } from "./kit";
+
+const MOBILE = "/api/dash/mobile";
 
 type K = { label: string; value: number; href: string; tone: keyof typeof TINT };
 type Quick = { href: string; label: string; icon: string };
@@ -25,13 +28,9 @@ function kpiIcon(href: string): LucideIcon {
 
 /** Role-specific live KPI tiles plus an RBAC-filtered quick-menu grid for the dashboard home. Refreshed every 10 s while visible. */
 export default function RoleKpi({ quick = [] }: { quick?: Quick[] }) {
-  const [k, setK] = useState<K[] | null>(null);
-  useEffect(() => {
-    const load = () => void api<{ kpis: K[] }>("/api/dash/mobile").then((r) => r.ok && setK(r.kpis));
-    const t = setTimeout(load, 0);
-    const i = setInterval(() => document.visibilityState === "visible" && load(), 10000);
-    return () => (clearTimeout(t), clearInterval(i));
-  }, []);
+  const [k, setK] = useState<K[] | null>(() => peek<{ kpis: K[] }>(MOBILE)?.kpis ?? null);
+  const load = useCallback(() => void sharedGet(MOBILE, () => api<{ kpis: K[] }>(MOBILE)).then((r) => { if (r.ok) { remember(MOBILE, r); setK(r.kpis); } }), []);
+  useOnLive(load, 60000);
   return (
     <>
       {!k ? (

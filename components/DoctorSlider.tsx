@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import { FINE_POINTER, MOTION_OK, ScrollTrigger, gsap, useGSAP } from "@/lib/gsap";
+import Image from "next/image";
 import { L } from "./L";
 import { doctors, doctorsCopy as c } from "@/lib/content";
 import { waLink } from "@/lib/wa";
@@ -32,11 +32,7 @@ export default function DoctorSlider() {
   const [active, setActive] = useState(0); // follows the slider position (drives a11y + counter)
   const [shown, setShown] = useState(0); // info panel content, swapped between fade-out and fade-in
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
   useGSAP(
     () => {
@@ -379,6 +375,7 @@ export default function DoctorSlider() {
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
+    // eslint-disable-next-line react-hooks/immutability
     document.body.style.overflow = "hidden";
     const onEsc = (e: KeyboardEvent) => e.key === "Escape" && closeProfile();
     window.addEventListener("keydown", onEsc);

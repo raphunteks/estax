@@ -5,6 +5,7 @@ import ExamCare from "./ExamCare";
 import { useCallback, useEffect, useRef, useState } from "react";
 import IcdPicker, { type Dx } from "@/components/dash/IcdPicker";
 import ExamAi from "@/components/dash/ExamAi";
+import { peek, remember, useOnLive } from "@/lib/live";
 import { Badge, Card, Empty, Field, Input, Select, Skeleton, Tabs, api, fmtDate } from "@/components/dash/kit";
 import Odontogram from "@/components/dash/Odontogram";
 import { emptyOdo, type Odo } from "@/lib/clinic/odontogram";
@@ -279,18 +280,16 @@ function ListEditor<T extends { id: string }>({ title, items, ro, empty, make, o
 type Row = { id: string; patientId: string; patientName: string; rmNo: string | null; time: string; status: string; queueNo?: number; complaint?: string };
 /** Doctor's list of patients ready to examine today. */
 export function ExamQueue() {
-  const [rows, setRows] = useState<Row[] | null>(null);
+  const [rows, setRows] = useState<Row[] | null>(() => peek<Row[]>("exam-queue"));
   const [err, setErr] = useState("");
   const load = useCallback(async () => {
     const d = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
     const r = await api<{ appointments: Row[] }>(`/api/appointments?date=${d}`);
-    setRows(r.ok ? (r.appointments ?? []).filter((a) => ["checkin", "dipanggil", "dikursi", "selesai"].includes(a.status)) : []);
+    const next = r.ok ? (r.appointments ?? []).filter((a) => ["checkin", "dipanggil", "dikursi", "selesai"].includes(a.status)) : [];
+    remember("exam-queue", next);
+    setRows(next);
   }, []);
-  useEffect(() => {
-    const t = setTimeout(() => void load(), 0);
-    const i = setInterval(load, 15000);
-    return () => (clearTimeout(t), clearInterval(i));
-  }, [load]);
+  useOnLive(load, 60000);
   const call = async (id: string, action: "call" | "recall") => {
     const r = await api(`/api/appointments/${id}`, "PATCH", { action });
     if (r.ok) void load(); else setErr(r.message ?? "Gagal memanggil pasien.");

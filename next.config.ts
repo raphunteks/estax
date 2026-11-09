@@ -12,8 +12,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  // Revisited dashboard tabs paint from the client cache for 30 s; LiveSync calls router.refresh() (which drops this cache) the moment data changes.
   experimental: {
     inlineCss: true,
+    staleTimes: { dynamic: 30, static: 180 },
     optimizePackageImports: [
       "lucide-react",
       "three",
