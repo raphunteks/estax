@@ -5,10 +5,12 @@ import { useLazyGsap } from "@/lib/use-gsap-lazy";
 import { L } from "./L";
 import { clinic, footerCopy } from "@/lib/content";
 import { PAGES } from "@/lib/seo";
+import { useLang } from "@/lib/lang";
 
 /** Footer with a giant wordmark whose letters rise out of a mask when it enters the viewport. */
 export default function Footer() {
   const root = useRef<HTMLElement>(null);
+  const lang = useLang();
 
   useLazyGsap(root, ({ gsap, SplitText, MOTION_OK }) => {
     {
@@ -39,10 +41,10 @@ export default function Footer() {
           </p>
         </div>
       </div>
-      <nav aria-label="Peta situs" className="relative mx-auto mt-10 max-w-6xl px-4 sm:px-6">
+      <nav aria-label={lang === "en" ? footerCopy.sitemapAria.en : footerCopy.sitemapAria.id} className="relative mx-auto mt-10 max-w-6xl px-4 sm:px-6">
         <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
           {Object.values(PAGES).map((p) => (
-            <li key={p.path}><a href={p.path} className="inline-flex min-h-11 items-center transition-colors hover:text-fg">{p.name}</a></li>
+            <li key={p.path}><a href={p.path} className="inline-flex min-h-11 items-center transition-colors hover:text-fg"><L v={p.nameBi} /></a></li>
           ))}
         </ul>
       </nav>

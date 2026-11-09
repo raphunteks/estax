@@ -7,6 +7,7 @@ import Image from "next/image";
 import { L } from "./L";
 import { doctors, doctorsCopy as c } from "@/lib/content";
 import { waLink } from "@/lib/wa";
+import { useLang } from "@/lib/lang";
 
 const N = doctors.length;
 const doctorsLabel = "Dokter / Doctors";
@@ -18,6 +19,7 @@ type Api = { go: (i: number) => void; step: (d: number) => void; scrub: (p: numb
 
 export default function DoctorSlider() {
   const root = useRef<HTMLElement>(null);
+  const lang = useLang();
   const stage = useRef<HTMLDivElement>(null);
   const api = useRef<Api | null>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -513,17 +515,17 @@ export default function DoctorSlider() {
         {/* Bottom bar */}
         <div className="cs-bar cs-a mx-auto mt-6 mpin:mt-3 mpin:pb-4 flex w-full max-w-6xl lg:pb-5 flex-wrap items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <button type="button" className="press grid size-12 place-items-center rounded-full border border-line hover:border-accent disabled:opacity-35" onClick={() => api.current?.step(-1)} disabled={active === 0} aria-label={c.prev.id}>
+            <button type="button" className="press grid size-12 place-items-center rounded-full border border-line hover:border-accent disabled:opacity-35" onClick={() => api.current?.step(-1)} disabled={active === 0} aria-label={lang === "en" ? c.prev.en : c.prev.id}>
               <span aria-hidden="true">←</span>
             </button>
-            <div className="flex items-center gap-2 px-2" role="tablist" aria-label={c.select.id}>
+            <div className="flex items-center gap-2 px-2" role="tablist" aria-label={lang === "en" ? c.select.en : c.select.id}>
               {doctors.map((doc, i) => (
                 <button key={doc.id} type="button" role="tab" aria-selected={active === i} aria-label={doc.name} tabIndex={-1} onClick={() => api.current?.go(i)} className="grid size-6 place-items-center">
                   <span className={`block rounded-full transition-all duration-500 ${active === i ? "h-2 w-8 bg-accent" : "size-2 bg-fg/25"}`} />
                 </button>
               ))}
             </div>
-            <button type="button" className="press grid size-12 place-items-center rounded-full border border-line hover:border-accent disabled:opacity-35" onClick={() => api.current?.step(1)} disabled={active === N - 1} aria-label={c.next.id}>
+            <button type="button" className="press grid size-12 place-items-center rounded-full border border-line hover:border-accent disabled:opacity-35" onClick={() => api.current?.step(1)} disabled={active === N - 1} aria-label={lang === "en" ? c.next.en : c.next.id}>
               <span aria-hidden="true">→</span>
             </button>
           </div>
@@ -566,7 +568,7 @@ export default function DoctorSlider() {
                 type="button"
                 onClick={closeProfile}
                 className="cs-panel-item press absolute right-4 top-4 sm:right-6 sm:top-6 z-30 grid size-11 place-items-center rounded-full border border-line bg-surface/85 text-fg shadow-sm backdrop-blur-md transition-all hover:border-accent hover:bg-surface active:scale-95"
-                aria-label={c.close.id}
+                aria-label={lang === "en" ? c.close.en : c.close.id}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <path d="M6 6l12 12M18 6L6 18" />

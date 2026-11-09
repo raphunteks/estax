@@ -36,6 +36,13 @@ export const nav: { href: string; label: Bi }[] = [
   { href: "#location", label: { id: "Lokasi", en: "Location" } },
 ];
 
+export const navCopy = {
+  login: { id: "Masuk", en: "Log in" },
+  langAria: { id: "Pilihan bahasa", en: "Language options" },
+  menuOpen: { id: "Buka menu navigasi", en: "Open navigation menu" },
+  menuClose: { id: "Tutup menu navigasi", en: "Close navigation menu" },
+};
+
 export const hero = {
   eyebrow: { id: "Estaka Dental Clinic · Dokter Gigi Umum dan Spesialis", en: "Estaka Dental Clinic · General and Specialist Dentists" },
   title: { id: "Senyum yang terawat, *dirancang bersama Anda.*", en: "Dental care that is precise, *planned with you.*" },
@@ -295,9 +302,90 @@ export const bookingCopy = {
   again: { id: "Buat janji lain", en: "Make another booking" },
   noDates: { id: "Memuat tanggal…", en: "Loading dates…" },
   fine: { id: "Janji bersifat permintaan hingga dikonfirmasi tim klinik.", en: "Bookings are requests until confirmed by the clinic team." },
+
+  // Mode tabs & patient options
+  patientTypeLabel: { id: "Jenis pasien", en: "Patient type" },
+  tabNew: { id: "Pasien baru", en: "New patient" },
+  tabReturning: { id: "Pasien lama (NIK / No RM)", en: "Returning patient (NIK / Med. Record)" },
+
+  // Legends
+  legendPatientData: { id: "1. Data pasien", en: "1. Patient details" },
+  legendLookupPatient: { id: "1. Cari data pasien", en: "1. Look up patient" },
+  legendDoctorDateTime: { id: "2. Dokter, tanggal, dan jam", en: "2. Doctor, date, and time" },
+  legendComplaintSafety: { id: "3. Keluhan dan keselamatan", en: "3. Complaint and safety" },
+  legendComplaintOnly: { id: "3. Keluhan", en: "3. Complaint" },
+
+  // Input labels & placeholders
+  nikLabel: { id: "Nomor Induk Kependudukan (NIK)", en: "National ID Number (NIK)" },
+  nikPlaceholder: { id: "16 digit NIK", en: "16-digit NIK" },
+  nameLabel: { id: "Nama lengkap", en: "Full name" },
+  namePlaceholder: { id: "Sesuai KTP", en: "As on ID card" },
+  birthDateLabel: { id: "Tanggal lahir", en: "Date of birth" },
+  genderLabel: { id: "Jenis kelamin", en: "Gender" },
+  genderMale: { id: "Laki-laki", en: "Male" },
+  genderFemale: { id: "Perempuan", en: "Female" },
+  phoneLabel: { id: "Nomor WhatsApp aktif", en: "Active WhatsApp number" },
+  phonePlaceholder: { id: "08xxxxxxxxxx", en: "08xxxxxxxxxx" },
+  addressLabel: { id: "Alamat domisili", en: "Residential address" },
+  addressPlaceholder: { id: "Nama jalan, nomor rumah, kelurahan, kota", en: "Street name, house number, subdistrict, city" },
+  allergiesLabel: { id: "Riwayat alergi obat (penting untuk keselamatan Anda)", en: "Drug allergy history (vital for your safety)" },
+  allergiesPlaceholder: { id: "Contoh: Amoxicillin, Asam Mefenamat, atau tulis Tidak ada", en: "e.g. Amoxicillin, Mefenamic Acid, or write None" },
+  complaintLabel: { id: "Keluhan utama gigi atau gejala yang dialami", en: "Main dental complaint or symptoms" },
+  complaintPlaceholder: { id: "Nyeri, gigi ngilu, tambalan lepas, gusi bengkak, atau kebutuhan estetika", en: "Pain, tooth sensitivity, loose filling, swollen gums, or aesthetic goals" },
+
+  // Returning patient search
+  identLabel: { id: "NIK (16 digit) atau Nomor RM", en: "NIK (16 digits) or Medical Record No." },
+  birthDateOldLabel: { id: "Tanggal lahir", en: "Date of birth" },
+  phone4Label: { id: "4 digit terakhir nomor HP", en: "Last 4 digits of phone number" },
+  lookupBtn: { id: "Cari data pasien", en: "Find patient details" },
+  foundData: { id: "Data ditemukan:", en: "Patient found:" },
+  foundContinue: { id: ". Lanjutkan memilih dokter dan jadwal. ", en: ". Proceed to choose doctor and schedule. " },
+  changePatient: { id: "Ganti", en: "Change" },
+
+  // Doctor & schedule
+  doctorSelectLabel: { id: "Dokter gigi pemeriksa", en: "Examining dentist" },
+  anyDoctor: { id: "Dokter mana saja yang tersedia", en: "Any available dentist" },
+  dateHeading: { id: "Tanggal", en: "Date" },
+  customDateLabel: { id: "Atau pilih tanggal lain", en: "Or pick another date" },
+  timeHeading: { id: "Jam", en: "Time" },
+  selectDateFirst: { id: "Pilih tanggal yang tersedia terlebih dulu.", en: "Please select an available date first." },
+  loadingSchedule: { id: "Memuat jadwal…", en: "Loading schedule…" },
+  noSlotsOnDate: { id: "Tidak ada jadwal praktik pada tanggal ini. Coba tanggal lain.", en: "No practice hours on this date. Please try another date." },
+  closedOnDate: { id: "pada tanggal ini. Silakan pilih tanggal lain.", en: "on this date. Please choose another date." },
+  closedOutsideRange: (h: number) => ({ id: `Di luar rentang pemesanan (maks. ${h} hari ke depan)`, en: `Outside booking range (max. ${h} days ahead)` }),
+  closedAllOff: { id: "Semua dokter cuti", en: "All dentists on leave" },
+  closedDocOff: { id: "Dokter cuti", en: "Dentist on leave" },
+  closedNoSchedule: { id: "Tidak ada jam praktik", en: "No practice hours" },
+
+  // Validation
+  completeFirst: { id: "Lengkapi dulu: ", en: "Please complete first: " },
+  missingNik: { id: "NIK 16 digit", en: "16-digit NIK" },
+  missingName: { id: "nama lengkap", en: "full name" },
+  missingBirthDate: { id: "tanggal lahir", en: "date of birth" },
+  missingPhone: { id: "nomor WhatsApp", en: "WhatsApp number" },
+  missingAddress: { id: "alamat (min. 5 huruf)", en: "address (min. 5 chars)" },
+  missingAllergies: { id: "riwayat alergi (tulis Tidak ada atau -)", en: "allergy history (write None or -)" },
+  missingDate: { id: "tanggal yang tersedia", en: "an available date" },
+  missingTime: { id: "jam", en: "a time slot" },
+  missingComplaint: { id: "keluhan (tulis - bila hanya kontrol)", en: "complaint (write - if check-up only)" },
+  missingConsent: { id: "persetujuan data", en: "data consent" },
+  missingVerification: { id: "verifikasi data pasien lama", en: "returning patient verification" },
+
+  // Errors
+  connError: { id: "Koneksi bermasalah. Coba lagi atau hubungi kami lewat WhatsApp.", en: "Connection issue. Please try again or reach us via WhatsApp." },
+  matchError: { id: "Data tidak cocok.", en: "Patient details do not match." },
+  failError: { id: "Permintaan belum terkirim.", en: "Request could not be sent." },
+
+  // Confirmation
+  doneAt: { id: "pukul", en: "at" },
+  doneStatus: {
+    id: "WITA. Janji Anda berstatus menunggu konfirmasi dari tim kami melalui WhatsApp.",
+    en: "WITA. Your appointment is pending confirmation from our team via WhatsApp.",
+  },
 };
 
 export const footerCopy = {
+  sitemapAria: { id: "Peta situs", en: "Sitemap" },
   rights: { id: "Seluruh hak cipta dilindungi.", en: "All rights reserved." },
   disclaimer: {
     id: "Informasi di situs ini bersifat umum dan bukan pengganti pemeriksaan oleh dokter gigi.",

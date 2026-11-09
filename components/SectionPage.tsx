@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import Global from "@/components/Global";
+import { L } from "@/components/L";
 import { WhatsAppFab } from "@/components/Sections";
 import { SiteProvider } from "@/lib/site-context";
 import { getSite } from "@/lib/site";
@@ -14,7 +15,7 @@ export default async function SectionPage({ page, children, ld = [] }: { page: P
     <>
       <Nav />
       <main id="top">
-        <h1 className="sr-only">{p.h1}</h1>
+        <h1 className="sr-only"><L v={p.h1Bi} /></h1>
         <SiteProvider value={site}>{children}</SiteProvider>
       </main>
       <Footer />

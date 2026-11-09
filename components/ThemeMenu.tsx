@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { THEMES, THEME_KEYS, applyTheme, autoTheme, type ThemePref } from "@/lib/theme";
+import { L } from "./L";
+import { useLang } from "@/lib/lang";
+import type { Bi } from "@/lib/content";
 
 const subscribe = (cb: () => void) => {
   const mo = new MutationObserver(cb);
@@ -25,6 +28,7 @@ const SHEET = {
 export default function ThemeMenu({ align = "right", up = false, sheet }: { align?: "left" | "right"; up?: boolean; sheet?: "md" | "lg" }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const lang = useLang();
   const current = useSyncExternalStore(subscribe, pref, () => "auto" as ThemePref);
   const shown = useSyncExternalStore(subscribe, () => document.documentElement.dataset.theme ?? "malam", () => "malam");
   const sw = THEMES[(shown in THEMES ? shown : "malam") as keyof typeof THEMES].sw;
@@ -61,8 +65,8 @@ export default function ThemeMenu({ align = "right", up = false, sheet }: { alig
     e.preventDefault();
     items[(to + items.length) % items.length]?.focus();
   };
-  const options: { key: ThemePref; label: string; desc: string }[] = [
-    { key: "auto", label: "Ikut Jam", desc: "Berganti sepanjang hari (WITA)" },
+  const options: { key: ThemePref; label: Bi; desc: Bi }[] = [
+    { key: "auto", label: { id: "Ikut Jam", en: "Follow Clock" }, desc: { id: "Berganti sepanjang hari (WITA)", en: "Changes through the day (WITA)" } },
     ...THEME_KEYS.map((k) => ({ key: k as ThemePref, label: THEMES[k].label, desc: THEMES[k].desc })),
   ];
 
@@ -72,7 +76,7 @@ export default function ThemeMenu({ align = "right", up = false, sheet }: { alig
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Pilih tema warna"
+        aria-label={lang === "en" ? "Choose color theme" : "Pilih tema warna"}
         onClick={() => setOpen((o) => !o)}
         className="grid size-10 place-items-center rounded-full border border-line bg-card/60 transition-[transform,background-color] hover:bg-card active:scale-95"
       >
@@ -85,7 +89,7 @@ export default function ThemeMenu({ align = "right", up = false, sheet }: { alig
       </button>
       <div
         role="menu"
-        aria-label="Tema warna"
+        aria-label={lang === "en" ? "Color theme" : "Tema warna"}
         hidden={!open}
         className={`material z-[70] rounded-3xl border border-line bg-bg p-2 shadow-2xl ${sheet ? `${SHEET[sheet]} ${align === "right" ? (sheet === "lg" ? "lg:right-0" : "md:right-0") : (sheet === "lg" ? "lg:left-0" : "md:left-0")}` : `absolute w-[min(88vw,20rem)] ${align === "right" ? "right-0" : "left-0"} ${up ? "bottom-full mb-2" : "top-full mt-2"}`}`}
       >
@@ -107,8 +111,16 @@ export default function ThemeMenu({ align = "right", up = false, sheet }: { alig
                 <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full border border-line text-xs font-semibold">24</span>
               )}
               <span>
-                <span className="block text-sm font-semibold">{o.label}</span>
-                <span className="block text-xs text-muted">{o.key === "auto" ? `${o.desc} · kini ${THEMES[autoTheme()].label}` : o.desc}</span>
+                <span className="block text-sm font-semibold"><L v={o.label} /></span>
+                <span className="block text-xs text-muted">
+                  {o.key === "auto" ? (
+                    <>
+                      <L v={o.desc} /> · <L v={{ id: "kini", en: "now" }} /> <L v={THEMES[autoTheme()].label} />
+                    </>
+                  ) : (
+                    <L v={o.desc} />
+                  )}
+                </span>
               </span>
             </button>
           );

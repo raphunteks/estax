@@ -1,10 +1,10 @@
 /** Theme palettes. Tokens live in globals.css; this file only names them and resolves "Ikut Jam". */
 export const THEMES = {
-  siang: { label: "Siang", desc: "Krim dan kobalt", tone: "light", bar: "#f6f1e4", sw: ["#fbf7ea", "#1a3bb5"] },
-  malam: { label: "Malam", desc: "Navy pekat", tone: "dark", bar: "#0a0d18", sw: ["#0f1426", "#8a9cff"] },
-  aren: { label: "Aren", desc: "Gula aren dan espresso", tone: "light", bar: "#f4e8d0", sw: ["#e0b56a", "#9a4f1e"] },
-  pandan: { label: "Pandan", desc: "Hijau segar", tone: "light", bar: "#eaf3ea", sw: ["#e8f2e8", "#2f6b4a"] },
-  sunrise: { label: "Sunrise", desc: "Jingga dan plum", tone: "light", bar: "#fdeee3", sw: ["#fdeee3", "#b13c20"] },
+  siang: { label: { id: "Siang", en: "Day" }, desc: { id: "Krim dan kobalt", en: "Cream and cobalt" }, tone: "light", bar: "#f6f1e4", sw: ["#fbf7ea", "#1a3bb5"] },
+  malam: { label: { id: "Malam", en: "Night" }, desc: { id: "Navy pekat", en: "Deep navy" }, tone: "dark", bar: "#0a0d18", sw: ["#0f1426", "#8a9cff"] },
+  aren: { label: { id: "Aren", en: "Palm Sugar" }, desc: { id: "Gula aren dan espresso", en: "Palm sugar and espresso" }, tone: "light", bar: "#f4e8d0", sw: ["#e0b56a", "#9a4f1e"] },
+  pandan: { label: { id: "Pandan", en: "Pandan" }, desc: { id: "Hijau segar", en: "Fresh green" }, tone: "light", bar: "#eaf3ea", sw: ["#e8f2e8", "#2f6b4a"] },
+  sunrise: { label: { id: "Sunrise", en: "Sunrise" }, desc: { id: "Jingga dan plum", en: "Orange and plum" }, tone: "light", bar: "#fdeee3", sw: ["#fdeee3", "#b13c20"] },
 } as const;
 export type ThemeName = keyof typeof THEMES;
 export type ThemePref = ThemeName | "auto";

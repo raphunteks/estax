@@ -3,7 +3,7 @@
 import ThemeMenu from "@/components/ThemeMenu";
 import { useEffect, useState } from "react";
 import { L } from "./L";
-import { clinic, nav, hero } from "@/lib/content";
+import { clinic, nav, hero, navCopy } from "@/lib/content";
 import { setLang, useLang } from "@/lib/lang";
 
 export default function Nav() {
@@ -52,7 +52,7 @@ export default function Nav() {
         </ul>
 
         <div className="flex items-center gap-2">
-          <div className="flex rounded-full border border-line p-0.5 text-xs font-semibold" role="group" aria-label="Language">
+          <div className="flex rounded-full border border-line p-0.5 text-xs font-semibold" role="group" aria-label={lang === "en" ? navCopy.langAria.en : navCopy.langAria.id}>
             {(["id", "en"] as const).map((l) => (
               <button
                 key={l}
@@ -67,7 +67,7 @@ export default function Nav() {
           </div>
           <ThemeMenu />
           <a href="/masuk" className="btn btn-ghost hidden sm:inline-flex">
-            Masuk
+            <L v={navCopy.login} />
           </a>
           <a href="/reservasi" className="btn btn-primary hidden sm:inline-flex">
             <L v={hero.cta1} />
@@ -77,7 +77,7 @@ export default function Nav() {
             className="grid size-11 place-items-center rounded-full border border-line lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-menu"
-            aria-label="Menu"
+            aria-label={open ? (lang === "en" ? navCopy.menuClose.en : navCopy.menuClose.id) : (lang === "en" ? navCopy.menuOpen.en : navCopy.menuOpen.id)}
             onClick={() => setOpen((v) => !v)}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -103,7 +103,7 @@ export default function Nav() {
           ))}
         </ul>
         <a href="/masuk" className="btn btn-ghost mt-5 w-full">
-          Masuk
+          <L v={navCopy.login} />
         </a>
         <a href="/reservasi" onClick={() => setOpen(false)} className="btn btn-primary mt-3 w-full">
           <L v={hero.cta1} />

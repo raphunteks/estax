@@ -6,12 +6,15 @@ import { clinic, location, pricing, treatments } from "@/lib/content";
 import { waLink } from "@/lib/wa";
 import { useSite } from "@/lib/site-context";
 import { mapEmbedSrc } from "@/lib/site-helpers";
+import { useLang } from "@/lib/lang";
 
 const wrap = "mx-auto max-w-6xl px-4 sm:px-6";
 const sec = "py-24 sm:py-32";
 
 export function Pricing() {
-  const ask = waLink("Halo Estaka Dental Clinic, saya ingin menanyakan estimasi biaya perawatan.");
+  const lang = useLang();
+  const isEn = lang === "en";
+  const ask = waLink(isEn ? "Hello Estaka Dental Clinic, I would like to ask about treatment estimates." : "Halo Estaka Dental Clinic, saya ingin menanyakan estimasi biaya perawatan.");
   return (
     <section id="pricing" className={`${sec} bg-surface`}>
       <div className={wrap}>
@@ -32,6 +35,8 @@ export function Pricing() {
 }
 
 export function Location() {
+  const lang = useLang();
+  const isEn = lang === "en";
   const site = useSite().clinic;
   const wa = waLink(undefined, site.whatsapp);
   const address = site.address || clinic.address;
@@ -74,7 +79,7 @@ export function Location() {
         </div>
         {embed && (
           <div data-reveal>
-            <iframe title="Peta lokasi klinik" src={embed} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="aspect-[16/10] max-h-[300px] w-full rounded-3xl sm:max-h-[340px] border border-line" />
+            <iframe title={isEn ? "Clinic location map" : "Peta lokasi klinik"} src={embed} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen className="aspect-[16/10] max-h-[300px] w-full rounded-3xl sm:max-h-[340px] border border-line" />
           </div>
         )}
       </div>
@@ -83,7 +88,9 @@ export function Location() {
 }
 
 export function WhatsAppFab({ number }: { number?: string }) {
-  const wa = waLink("Halo Estaka Dental Clinic, saya ingin bertanya.", number);
+  const lang = useLang();
+  const isEn = lang === "en";
+  const wa = waLink(isEn ? "Hello Estaka Dental Clinic, I have a question." : "Halo Estaka Dental Clinic, saya ingin bertanya.", number);
   if (!wa) return null;
   return (
     <a
