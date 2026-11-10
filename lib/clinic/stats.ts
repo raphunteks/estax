@@ -1,19 +1,44 @@
 import "server-only";
+import { db, memoByRev } from "@/lib/db/store";
 import { getMaster } from "@/lib/master";
 import type { Role } from "@/lib/auth/rbac";
 import { ACTIVE, listAppts } from "./appointments";
 import { listPatients } from "./patients";
 import { addDays, todayWita } from "./time";
 
-/** Real numbers only: everything is computed from stored appointments and patients. */
+/** Real numbers only: everything is computed from stored appointments and patients, cached in RAM + Redis by sys:rev. */
 export async function getStats(user: { id: string; role: Role }) {
   const today = todayWita();
-  const from = addDays(today, -29);
   const doctorId = user.role === "dokter" ? user.id : undefined;
-  const [rows, rules, polis] = await Promise.all([listAppts({ from, to: addDays(today, 0), doctorId }), getMaster("rules"), getMaster("poliklinik")]);
+  return memoByRev(`stats:${user.role}:${doctorId ?? "all"}:${today}`, async (rev) => {
+    const cacheKey = `cache:stats:${user.role}:${doctorId ?? "all"}:${rev}:${today}`;
+    try {
+      const cached = await db().get<Awaited<ReturnType<typeof computeStats>>>(cacheKey);
+      if (cached) return cached;
+    } catch {
+      /* fallback to compute */
+    }
+    const data = await computeStats(user, today, doctorId);
+    void db().set(cacheKey, data, { ex: 600 }).catch(() => null);
+    return data;
+  });
+}
+
+async function computeStats(user: { id: string; role: Role }, today: string, doctorId: string | undefined) {
+  if (user.role === "apoteker") {
+    const todayRows = (await listAppts({ date: today })).filter((a) => a.status !== "batal_pasien" && a.status !== "batal_klinik");
+    return { limited: true as const, today: todayRows.length };
+  }
+  const from = addDays(today, -29);
+  const [rows, rules, polis, patients, pendingRows] = await Promise.all([
+    listAppts({ from, to: today, doctorId }),
+    getMaster("rules"),
+    getMaster("poliklinik"),
+    user.role === "dokter" ? Promise.resolve([]) : listPatients(),
+    listAppts({ status: ["menunggu"], doctorId }),
+  ]);
   const counted = rows.filter((a) => a.status !== "batal_pasien" && a.status !== "batal_klinik" && a.status !== "tidak_hadir");
-  const todayRows = (await listAppts({ date: today, doctorId })).filter((a) => a.status !== "batal_pasien" && a.status !== "batal_klinik");
-  if (user.role === "apoteker") return { limited: true as const, today: todayRows.length };
+  const todayRows = rows.filter((a) => a.date === today && a.status !== "batal_pasien" && a.status !== "batal_klinik");
 
   const perDay = Array.from({ length: 30 }, (_, i) => {
     const date = addDays(from, i);
@@ -21,7 +46,6 @@ export async function getStats(user: { id: string; role: Role }) {
   });
   const polName = new Map(polis.map((p) => [p.id, p.name]));
   const byPoli = Object.entries(counted.reduce<Record<string, number>>((m, a) => ((m[polName.get(a.poliklinikId ?? "") ?? "Lainnya"] = (m[polName.get(a.poliklinikId ?? "") ?? "Lainnya"] ?? 0) + 1), m), {})).map(([name, total]) => ({ name, total }));
-  const patients = user.role === "dokter" ? [] : await listPatients();
   const newIds = new Set(patients.filter((p) => p.createdAt >= Date.parse(`${from}T00:00:00+08:00`)).map((p) => p.id));
   const uniq = new Set(counted.map((a) => a.patientId));
   const fresh = [...uniq].filter((id) => newIds.has(id)).length;
@@ -32,7 +56,7 @@ export async function getStats(user: { id: string; role: Role }) {
     limited: false as const,
     kpi: {
       today: todayRows.length,
-      pending: (await listAppts({ status: ["menunggu"], doctorId })).length,
+      pending: pendingRows.length,
       waiting: todayRows.filter((a) => a.status === "checkin").length,
       inChair: todayRows.filter((a) => a.status === "dikursi" || a.status === "dipanggil").length,
       done: todayRows.filter((a) => a.status === "selesai").length,

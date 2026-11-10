@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BellRing, CalendarDays, ClipboardList, Ellipsis, House, LogOut, Package, Search, Stethoscope, UserCheck, Users, Wallet, ChartColumn, X, type LucideIcon } from "lucide-react";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, useGSAP } from "@/lib/gsap-lite";
 import { peek, remember, sharedGet, useOnLive } from "@/lib/live";
 import { api } from "./kit";
 

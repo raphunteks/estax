@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap";
+import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap-lite";
 import type { Stats } from "@/lib/clinic/stats";
 
 const C1 = "var(--accent)";

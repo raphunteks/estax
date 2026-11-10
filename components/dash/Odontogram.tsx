@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { MOTION_OK, gsap } from "@/lib/gsap";
+import { MOTION_OK, gsap } from "@/lib/gsap-lite";
 import {
   CODES, CODE_KEYS, PERMANENT, PRIMARY, SURFACES, SURFACE_LABEL, TONE, ALL_TEETH, describe, diff,
   type Code, type Odo, type Surface,

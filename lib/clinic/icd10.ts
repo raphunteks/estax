@@ -30,8 +30,10 @@ async function all(): Promise<Icd[]> {
     await store(parseSeed(), "seed-gigi");
     return mem!.rows;
   }
+  const chunkKeys = Array.from({ length: meta.chunks }, (_, i) => chunkKey(i));
+  const chunks = await db().mget<Icd[]>(...chunkKeys);
   const rows: Icd[] = [];
-  for (let i = 0; i < meta.chunks; i++) rows.push(...((await db().get<Icd[]>(chunkKey(i))) ?? []));
+  for (const c of chunks) if (c) rows.push(...c);
   mem = { rows, at: Date.now() };
   return rows;
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { randomId } from "@/lib/auth/crypto";
 import { getUser, listUsers } from "@/lib/auth/users";
-import { db } from "@/lib/db/store";
+import { db, memoByRev } from "@/lib/db/store";
 import { getMaster, getSchedule } from "@/lib/master";
 import { sendMail } from "@/lib/mail";
 import { notifyRole, notifyUser } from "@/lib/push";
@@ -27,21 +27,97 @@ const save = (a: Appt) => db().set(`appt:${a.id}`, a);
 export type Slot = { start: string; end: string; state: "free" | "booked" | "held" | "past"; apptId?: string };
 
 /** Slots of one doctor on one date: schedule sessions cut into slots, minus leave, past times, booked and held slots. */
-export async function slotsFor(doctorId: string, date: string, viewer?: string): Promise<Slot[]> {
-  const sch = await getSchedule(doctorId);
+export async function slotsFor(
+  doctorId: string,
+  date: string,
+  viewer?: string,
+  pre?: { sch?: Awaited<ReturnType<typeof getSchedule>>; rules?: Awaited<ReturnType<typeof getMaster<"rules">>> },
+): Promise<Slot[]> {
+  const [sch, rules] = await Promise.all([
+    pre?.sch !== undefined ? Promise.resolve(pre.sch) : getSchedule(doctorId),
+    pre?.rules !== undefined ? Promise.resolve(pre.rules) : getMaster("rules"),
+  ]);
   if (!sch || sch.leave?.includes(date)) return [];
-  const { slotGapMinutes } = await getMaster("rules");
-  const out: Slot[] = [];
+  const items: { start: string; end: string }[] = [];
   for (const s of sch.days[String(weekday(date)) as "0"] ?? []) {
-    for (let t = mins(s.start); t + sch.slotMinutes <= mins(s.end); t += sch.slotMinutes + slotGapMinutes) {
-      const start = hhmm(t);
-      const taken = await db().get<string>(slotKey(doctorId, date, start));
-      const hold = taken ? null : await db().get<string>(holdKey(doctorId, date, start));
-      const state: Slot["state"] = taken ? "booked" : epoch(date, start) <= Date.now() ? "past" : hold && hold !== viewer ? "held" : "free";
-      out.push({ start, end: hhmm(t + sch.slotMinutes), state, apptId: taken ?? undefined });
+    for (let t = mins(s.start); t + sch.slotMinutes <= mins(s.end); t += sch.slotMinutes + rules.slotGapMinutes) {
+      items.push({ start: hhmm(t), end: hhmm(t + sch.slotMinutes) });
     }
   }
-  return out.sort((a, b) => a.start.localeCompare(b.start));
+  if (!items.length) return [];
+  const now = Date.now();
+  const sKeys = items.map((x) => slotKey(doctorId, date, x.start));
+  const futureIdx = items.map((x, i) => (epoch(date, x.start) > now ? i : -1)).filter((i) => i >= 0);
+  const hKeys = futureIdx.map((i) => holdKey(doctorId, date, items[i].start));
+  const vals = await db().mget<string>(...sKeys, ...hKeys);
+  const holdByIdx = new Map(futureIdx.map((idx, pos) => [idx, vals[sKeys.length + pos]]));
+  return items
+    .map((x, i) => {
+      const taken = vals[i];
+      const hold = holdByIdx.get(i);
+      const state: Slot["state"] = taken ? "booked" : epoch(date, x.start) <= now ? "past" : hold && hold !== viewer ? "held" : "free";
+      return { start: x.start, end: x.end, state, apptId: taken ?? undefined };
+    })
+    .sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/** Batch slot evaluation across multiple doctors in a single Redis `mget` round-trip. */
+export async function slotsForMany(
+  docs: { id: string; schedule: NonNullable<Awaited<ReturnType<typeof getSchedule>>> }[],
+  date: string,
+  viewer = "public",
+  preRules?: Awaited<ReturnType<typeof getMaster<"rules">>>,
+): Promise<Slot[][]> {
+  if (!docs.length) return [];
+  const rules = preRules ?? (await getMaster("rules"));
+  const now = Date.now();
+  const wd = String(weekday(date)) as "0";
+
+  type DocPlan = {
+    doctorId: string;
+    items: { start: string; end: string }[];
+    sOffset: number;
+    futureIdx: number[];
+    hOffset: number;
+  };
+
+  const allSKeys: string[] = [];
+  const allHKeys: string[] = [];
+  const plans: DocPlan[] = docs.map((d) => {
+    const sch = d.schedule;
+    if (!sch || sch.leave?.includes(date)) {
+      return { doctorId: d.id, items: [], sOffset: 0, futureIdx: [], hOffset: 0 };
+    }
+    const items: { start: string; end: string }[] = [];
+    for (const s of sch.days[wd] ?? []) {
+      for (let t = mins(s.start); t + sch.slotMinutes <= mins(s.end); t += sch.slotMinutes + rules.slotGapMinutes) {
+        items.push({ start: hhmm(t), end: hhmm(t + sch.slotMinutes) });
+      }
+    }
+    const sOffset = allSKeys.length;
+    for (const x of items) allSKeys.push(slotKey(d.id, date, x.start));
+    const futureIdx = items.map((x, i) => (epoch(date, x.start) > now ? i : -1)).filter((i) => i >= 0);
+    const hOffset = allHKeys.length;
+    for (const i of futureIdx) allHKeys.push(holdKey(d.id, date, items[i].start));
+    return { doctorId: d.id, items, sOffset, futureIdx, hOffset };
+  });
+
+  if (!allSKeys.length) return plans.map(() => []);
+  const vals = await db().mget<string>(...allSKeys, ...allHKeys);
+  const hBase = allSKeys.length;
+
+  return plans.map((p) => {
+    if (!p.items.length) return [];
+    const holdByIdx = new Map(p.futureIdx.map((idx, pos) => [idx, vals[hBase + p.hOffset + pos]]));
+    return p.items
+      .map((x, i) => {
+        const taken = vals[p.sOffset + i];
+        const hold = holdByIdx.get(i);
+        const state: Slot["state"] = taken ? "booked" : epoch(date, x.start) <= now ? "past" : hold && hold !== viewer ? "held" : "free";
+        return { start: x.start, end: x.end, state, apptId: taken ?? undefined };
+      })
+      .sort((a, b) => a.start.localeCompare(b.start));
+  });
 }
 
 export async function holdSlot(doctorId: string, date: string, time: string, holder: string) {
@@ -121,10 +197,12 @@ export async function listAppts(f: { date?: string; from?: string; to?: string; 
   if (f.patientId) ids = await db().smembers(`appts:patient:${f.patientId}`);
   else if (f.date) ids = await db().smembers(`appts:date:${f.date}`);
   else if (f.from && f.to) {
-    ids = [];
-    for (let d = f.from; d <= f.to; d = addDays(d, 1)) ids.push(...(await db().smembers(`appts:date:${d}`)));
+    const dates: string[] = [];
+    for (let d = f.from; d <= f.to; d = addDays(d, 1)) dates.push(d);
+    ids = [...new Set((await Promise.all(dates.map((d) => db().smembers(`appts:date:${d}`)))).flat())];
   } else ids = await db().smembers("appts:all");
-  let rows = ((await Promise.all(ids.map(getAppt))).filter(Boolean) as Appt[]);
+  if (!ids.length) return [];
+  let rows = ((await db().mget<Appt>(...ids.map((id) => `appt:${id}`))).filter(Boolean) as Appt[]);
   if (f.doctorId) rows = rows.filter((a) => a.doctorId === f.doctorId);
   if (f.status) rows = rows.filter((a) => f.status!.includes(a.status));
   return rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
@@ -231,7 +309,17 @@ export async function calendarDay(doctorId: string, date: string, viewer: string
   const appts = new Map((await listAppts({ date, doctorId })).filter((a) => ACTIVE.includes(a.status) || a.status === "selesai").map((a) => [a.id, a]));
   return slots.map((s) => ({ ...s, appt: s.apptId ? (appts.get(s.apptId) ?? null) : null }));
 }
-export const doctorsWithSchedule = async () => {
-  const docs = (await listUsers()).filter((u) => u.role === "dokter" && u.active);
-  return (await Promise.all(docs.map(async (d) => ({ id: d.id, name: d.name, schedule: await getSchedule(d.id) })))).filter((d) => d.schedule);
-};
+type DocWithSched = { id: string; name: string; schedule: NonNullable<Awaited<ReturnType<typeof getSchedule>>> };
+export const doctorsWithSchedule = async (): Promise<DocWithSched[]> =>
+  memoByRev("docs:sched", async (rev) => {
+    const cached = await db().get<{ rev: number; data: DocWithSched[] }>("cache:docs_sched");
+    if (cached && cached.rev === rev && Array.isArray(cached.data)) return cached.data;
+    const docs = (await listUsers()).filter((u) => u.role === "dokter" && u.active);
+    if (!docs.length) return [];
+    const schedules = await db().mget<Awaited<ReturnType<typeof getSchedule>>>(...docs.map((d) => `master:schedule:${d.id}`));
+    const data = docs
+      .map((d, i) => ({ id: d.id, name: d.name, schedule: schedules[i] }))
+      .filter((d): d is DocWithSched => Boolean(d.schedule));
+    void db().set("cache:docs_sched", { rev, data }, { ex: 600 }).catch(() => null);
+    return data;
+  });

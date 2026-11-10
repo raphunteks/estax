@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db } from "@/lib/db/store";
+import { db, memoByRev } from "@/lib/db/store";
 import { randomId } from "@/lib/auth/crypto";
 import { getAppt } from "./appointments";
 import { discountFor, getPromo } from "./promos";
@@ -9,7 +9,7 @@ import { withLock, isBusy } from "./lock";
 const money = z.number().int().min(0).max(1_000_000_000);
 export const tariffsSchema = z.array(z.object({ id: z.string().regex(/^[a-z0-9-]{2,40}$/), code: z.string().trim().max(20), name: z.string().trim().min(2).max(120), price: money, poliklinikId: z.string().max(30).optional(), active: z.boolean() })).max(300);
 export type Tariff = z.infer<typeof tariffsSchema>[number];
-export const getTariffs = async () => ((await db().get<Tariff[]>("master:tariffs")) ?? []) as Tariff[];
+export const getTariffs = async () => memoByRev("master:tariffs", async () => ((await db().get<Tariff[]>("master:tariffs")) ?? []) as Tariff[]);
 export const setTariffs = (v: Tariff[]) => db().set("master:tariffs", v);
 
 export const METHODS = ["tunai", "transfer", "qris", "debit", "asuransi", "bpjs"] as const;
@@ -74,7 +74,8 @@ export async function invoiceFromVisit(visitId: string): Promise<Invoice | null>
 
 export async function listInvoices(f: { patientId?: string; status?: string; limit?: number } = {}) {
   const ids = f.patientId ? await db().smembers(`inv:p:${f.patientId}`) : await db().smembers("inv:idx");
-  const all = (await Promise.all(ids.map(getInvoice))).filter(Boolean) as Invoice[];
+  if (!ids.length) return [];
+  const all = ((await db().mget<Invoice>(...ids.map(key))).filter(Boolean) as Invoice[]).map((i) => structuredClone(i));
   return all.filter((i) => !f.status || f.status.split(",").includes(i.status)).sort((a, b) => b.createdAt - a.createdAt).slice(0, f.limit ?? 200);
 }
 

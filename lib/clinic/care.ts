@@ -25,7 +25,7 @@ export async function requestConsent(visit: Visit, tplId: string, doctorName: st
   await pushPatient(visit.patientId, "Persetujuan tindakan", `${doctorName} meminta persetujuan: ${tpl.title}.`, "/portal/persetujuan");
   return c;
 }
-const load = async (ids: string[]) => ((await Promise.all(ids.map(getConsent))).filter(Boolean) as Consent[]).sort((a, b) => b.createdAt - a.createdAt);
+const load = async (ids: string[]) => (ids.length ? ((await db().mget<Consent>(...ids.map(ck))).filter(Boolean) as Consent[]).sort((a, b) => b.createdAt - a.createdAt) : []);
 export const consentsOfVisit = async (visitId: string) => load(await db().smembers(`consent:v:${visitId}`));
 export const consentsOfPatient = async (patientId: string) => load(await db().smembers(`consent:p:${patientId}`));
 
@@ -57,17 +57,27 @@ export async function indexRecall(visitId: string) { await db().sadd("recall:idx
 export type RecallRow = { visitId: string; patientId: string; patientName: string; rmNo: string | null; doctorId: string; name: string; date: string; note?: string; remindedAt?: number; overdue: boolean };
 /** Open recalls: the patient has no active appointment on/after the recall window start. */
 export async function openRecalls(doctorId?: string): Promise<RecallRow[]> {
-  const out: RecallRow[] = [];
+  const ids = await db().smembers("recall:idx");
+  if (!ids.length) return [];
   const today = todayWita();
   const { listAppts, ACTIVE } = await import("./appointments");
-  for (const id of await db().smembers("recall:idx")) {
-    const v = await getVisit(id);
-    if (!v?.recall || (doctorId && v.doctorId !== doctorId)) continue;
-    const appts = await listAppts({ patientId: v.patientId });
+  const visits = ((await db().mget<Visit>(...ids.map((id) => `visit:${id}`))).filter(Boolean) as Visit[])
+    .filter((v) => Boolean(v.recall) && (!doctorId || v.doctorId === doctorId));
+  if (!visits.length) return [];
+  const pids = [...new Set(visits.map((v) => v.patientId))];
+  const [patients, apptsByPid] = await Promise.all([
+    db().mget<Awaited<ReturnType<typeof getPatient>>>(...pids.map((id) => `patient:${id}`)),
+    Promise.all(pids.map((pid) => listAppts({ patientId: pid }))),
+  ]);
+  const pMap = new Map(pids.map((id, i) => [id, patients[i]]));
+  const aMap = new Map(pids.map((id, i) => [id, apptsByPid[i]]));
+  const out: RecallRow[] = [];
+  for (const v of visits) {
+    const appts = aMap.get(v.patientId) ?? [];
     const later = appts.some((a) => a.id !== v.apptId && a.date >= today && ACTIVE.includes(a.status)) || appts.some((a) => a.id !== v.apptId && a.date > v.date && a.status === "selesai");
     if (later) continue;
-    const p = await getPatient(v.patientId);
-    out.push({ visitId: v.id, patientId: v.patientId, patientName: p?.name ?? "-", rmNo: p?.rmNo ?? null, doctorId: v.doctorId, name: v.recall.name, date: v.recall.date, note: v.recall.note, remindedAt: v.recall.remindedAt, overdue: v.recall.date < today });
+    const p = pMap.get(v.patientId);
+    out.push({ visitId: v.id, patientId: v.patientId, patientName: p?.name ?? "-", rmNo: p?.rmNo ?? null, doctorId: v.doctorId, name: v.recall!.name, date: v.recall!.date, note: v.recall!.note, remindedAt: v.recall!.remindedAt, overdue: v.recall!.date < today });
   }
   return out.sort((a, b) => a.date.localeCompare(b.date));
 }

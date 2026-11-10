@@ -34,7 +34,9 @@ export async function saveSurvey(s: Omit<Survey, "id" | "t">): Promise<boolean> 
 }
 export const surveyDone = async (visitId: string) => Boolean(await db().get(`survey:v:${visitId}`));
 export async function listSurveys(): Promise<Survey[]> {
-  return ((await Promise.all((await db().smembers("survey:idx")).map((id) => db().get<Survey>(`survey:${id}`)))).filter(Boolean) as Survey[]).sort((a, b) => b.t - a.t);
+  const ids = await db().smembers("survey:idx");
+  if (!ids.length) return [];
+  return ((await db().mget<Survey>(...ids.map((id) => `survey:${id}`))).filter(Boolean) as Survey[]).sort((a, b) => b.t - a.t);
 }
 
 /* ---------- patient <-> clinic chat ---------- */
@@ -61,11 +63,14 @@ export const chatMessages = async (patientId: string) => (await db().lrange<Msg>
 export const markStaffRead = (patientId: string) => db().del(`chat:unread:${patientId}`);
 export async function chatThreads() {
   const ids = await db().smembers("chat:threads");
-  const rows = await Promise.all(ids.map(async (id) => {
-    const p = await getPatient(id);
-    const last = await db().get<{ t: number; from: string; text: string }>(`chat:last:${id}`);
-    const unread = Boolean(await db().get(`chat:unread:${id}`));
-    return { patientId: id, name: p?.name ?? "-", rmNo: p?.rmNo ?? null, last, unread };
-  }));
-  return rows.filter((r) => r.last).sort((a, b) => (b.last!.t - a.last!.t));
+  if (!ids.length) return [];
+  const [patients, lasts, unreads] = await Promise.all([
+    db().mget<Awaited<ReturnType<typeof getPatient>>>(...ids.map((id) => `patient:${id}`)),
+    db().mget<{ t: number; from: string; text: string }>(...ids.map((id) => `chat:last:${id}`)),
+    db().mget<unknown>(...ids.map((id) => `chat:unread:${id}`)),
+  ]);
+  return ids
+    .map((id, i) => ({ patientId: id, name: patients[i]?.name ?? "-", rmNo: patients[i]?.rmNo ?? null, last: lasts[i], unread: Boolean(unreads[i]) }))
+    .filter((r) => r.last)
+    .sort((a, b) => b.last!.t - a.last!.t);
 }

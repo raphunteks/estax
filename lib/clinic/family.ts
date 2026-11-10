@@ -15,8 +15,15 @@ export const dependentSchema = z.object({
 
 /** The portal user's own patient record first, then dependents they manage. */
 export async function ownPatients(uid: string): Promise<Patient[]> {
-  const self = await patientOfUser(uid);
-  const deps = (await Promise.all((await db().smembers(fk(uid))).map(getPatient))).filter(Boolean) as Patient[];
+  const [selfId, depIds] = await Promise.all([
+    db().get<string>(`patient:byuser:${uid}`),
+    db().smembers(fk(uid)),
+  ]);
+  const allIds = [...(selfId ? [selfId] : []), ...depIds];
+  if (!allIds.length) return [];
+  const rows = await db().mget<Patient>(...allIds.map((id) => `patient:${id}`));
+  const self = selfId ? rows[0] : null;
+  const deps = (selfId ? rows.slice(1) : rows).filter(Boolean) as Patient[];
   return [...(self ? [self] : []), ...deps.sort((a, b) => a.createdAt - b.createdAt)];
 }
 export const ownIds = async (uid: string) => (await ownPatients(uid)).map((p) => p.id);

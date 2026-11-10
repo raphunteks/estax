@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { db } from "@/lib/db/store";
+import { db, memoByRev } from "@/lib/db/store";
 
 /** Master data lives in Redis and is edited by the superadmin. Defaults apply until the first save. */
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -66,12 +66,14 @@ export const KINDS = { poliklinik: poliklinikSchema, paytypes: payTypesSchema, r
 export type Kind = keyof typeof KINDS;
 
 export async function getMaster<K extends Kind>(k: K) {
-  const v = await db().get(`master:${k}`);
-  const d = DEFAULTS[k];
-  if (v == null) return d as (typeof DEFAULTS)[K];
-  // object masters gain new fields over time: stored values win, missing fields fall back to defaults
-  return (Array.isArray(d) ? v : { ...d, ...(v as object) }) as (typeof DEFAULTS)[K];
+  return memoByRev(`master:${k}`, async () => {
+    const v = await db().get(`master:${k}`);
+    const d = DEFAULTS[k];
+    if (v == null) return d as (typeof DEFAULTS)[K];
+    // object masters gain new fields over time: stored values win, missing fields fall back to defaults
+    return (Array.isArray(d) ? v : { ...d, ...(v as object) }) as (typeof DEFAULTS)[K];
+  });
 }
 export const setMaster = (k: Kind, v: unknown) => db().set(`master:${k}`, v);
-export const getSchedule = (id: string) => db().get<Schedule>(`master:schedule:${id}`);
+export const getSchedule = (id: string) => memoByRev(`schedule:${id}`, () => db().get<Schedule>(`master:schedule:${id}`));
 export const setSchedule = (id: string, v: Schedule) => db().set(`master:schedule:${id}`, v);

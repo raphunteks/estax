@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap";
+import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap-lite";
 import Logo from "@/components/Logo";
 
 export const inputCls =

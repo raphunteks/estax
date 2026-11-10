@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Activity, CalendarDays, ChevronDown, Cog, Globe, Home, Lock, LogOut, PanelLeftClose, PanelLeftOpen, ScrollText, ShieldCheck, Tag, MessageCircle, Star, Sparkles, Stethoscope, User, Users, Wallet, Pill, BarChart3, X, type LucideIcon } from "lucide-react";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, useGSAP } from "@/lib/gsap-lite";
 import Logo from "@/components/Logo";
 import BottomNav from "./BottomNav";
 import { api } from "./kit";

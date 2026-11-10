@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { randomId } from "@/lib/auth/crypto";
-import { db } from "@/lib/db/store";
+import { db, memoByRev } from "@/lib/db/store";
 import { todayWita } from "./time";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -31,8 +31,12 @@ export type Promo = PromoInput & { id: string; createdBy: string; createdAt: num
 const pk = (id: string) => `promo:${id}`;
 export const getPromo = (id: string) => db().get<Promo>(pk(id));
 export async function listPromos(): Promise<Promo[]> {
-  const all = (await Promise.all((await db().smembers("promo:idx")).map(getPromo))).filter(Boolean) as Promo[];
-  return all.sort((a, b) => b.createdAt - a.createdAt);
+  return memoByRev("promos:all", async () => {
+    const ids = await db().smembers("promo:idx");
+    if (!ids.length) return [];
+    const all = (await db().mget<Promo>(...ids.map(pk))).filter(Boolean) as Promo[];
+    return all.sort((a, b) => b.createdAt - a.createdAt);
+  });
 }
 export async function createPromo(d: PromoInput, by: string): Promise<Promo> {
   const p: Promo = { ...d, id: randomId().slice(0, 12), createdBy: by, createdAt: Date.now() };

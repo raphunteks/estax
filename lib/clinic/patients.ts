@@ -90,7 +90,8 @@ export async function issueRm(p: Patient) {
 
 export async function listPatients(): Promise<Patient[]> {
   const ids = await db().smembers("patients:all");
-  return ((await Promise.all(ids.map(getPatient))).filter(Boolean) as Patient[]).sort((a, b) => b.createdAt - a.createdAt);
+  if (!ids.length) return [];
+  return ((await db().mget<Patient>(...ids.map(key))).filter(Boolean) as Patient[]).sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function searchPatients(q: string): Promise<Patient[]> {

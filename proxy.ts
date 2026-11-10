@@ -18,4 +18,4 @@ export function proxy(req: NextRequest) {
   return NextResponse.next({ request: { headers } });
 }
 
-export const config = { matcher: ["/daftar", "/verifikasi/:path*", "/dashboard/:path*", "/portal/:path*", "/masuk", "/lupa-sandi", "/atur-sandi/:path*"] };
+export const config = { matcher: ["/dashboard/:path*", "/portal/:path*"] };

@@ -23,7 +23,8 @@ const ik = (id: string) => `ph:item:${id}`;
 export const getItem = async (id: string) => { const v = await db().get<Item>(ik(id)); return v ? structuredClone(v) : null; };
 export async function listItems() {
   const ids = await db().smembers("ph:items");
-  return ((await Promise.all(ids.map(getItem))).filter(Boolean) as Item[]).sort((a, b) => a.name.localeCompare(b.name));
+  if (!ids.length) return [];
+  return ((await db().mget<Item>(...ids.map(ik))).filter(Boolean) as Item[]).map((i) => structuredClone(i)).sort((a, b) => a.name.localeCompare(b.name));
 }
 export type Move = { t: number; by: string; itemId: string; name: string; type: "restock" | "dispense" | "count" | "create"; qty: number; note?: string };
 const log = (m: Omit<Move, "t">) => db().lpush("ph:log", { ...m, t: Date.now() });
@@ -101,7 +102,8 @@ export async function callRx(visitId: string): Promise<Rx | null> {
 }
 export async function listRx(status?: Rx["status"]) {
   const ids = await db().smembers("rx:idx");
-  return ((await Promise.all(ids.map(getRx))).filter(Boolean) as Rx[]).filter((r) => !status || r.status === status).sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
+  if (!ids.length) return [];
+  return ((await db().mget<Rx>(...ids.map(rk))).filter(Boolean) as Rx[]).map((r) => structuredClone(r)).filter((r) => !status || r.status === status).sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
 }
 /** Heuristic only: a word (4+ letters) from the allergy note appearing in a drug or item name. */
 export function allergyHits(allergies: string, names: string[]) {

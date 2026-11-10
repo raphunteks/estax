@@ -50,7 +50,8 @@ export async function startVisit(a: Appt): Promise<Visit> {
 
 export async function visitsOfPatient(patientId: string): Promise<Visit[]> {
   const ids = await db().smembers(`visits:p:${patientId}`);
-  const vs = await Promise.all(ids.map(getVisit));
+  if (!ids.length) return [];
+  const vs = await db().mget<Visit>(...ids.map(vkey));
   return (vs.filter(Boolean) as Visit[]).sort((a, b) => b.createdAt - a.createdAt);
 }
 

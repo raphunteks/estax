@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FarmasiBoard, PoliBoard } from "@/lib/clinic/monitor";
-import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap";
+import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap-lite";
 
 type Kind = "poli" | "farmasi";
 type Board = PoliBoard | FarmasiBoard;

@@ -12,12 +12,17 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
+  productionBrowserSourceMaps: false,
+  enablePrerenderSourceMaps: false,
   // Revisited dashboard tabs paint from the client cache for 30 s; LiveSync calls router.refresh() (which drops this cache) the moment data changes.
   experimental: {
     inlineCss: true,
+    serverSourceMaps: false,
     staleTimes: { dynamic: 30, static: 180 },
+    turbopackMemoryEviction: "auto",
     optimizePackageImports: [
       "lucide-react",
+      "recharts",
       "three",
       "@react-three/fiber",
       "@react-three/drei",

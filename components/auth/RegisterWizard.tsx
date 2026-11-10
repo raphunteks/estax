@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ReCAPTCHA from "react-google-recaptcha";
 import type { ZodType } from "zod";
-import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap";
+import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap-lite";
 import Logo from "@/components/Logo";
 import { ageOf } from "@/lib/nik";
 import { CONDITIONS, credentials, staffPatientSchema, step1, step2, step3 } from "@/lib/patient-schema";

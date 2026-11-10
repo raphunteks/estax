@@ -1,10 +1,11 @@
 import "server-only";
+import { db, memoByRev } from "@/lib/db/store";
 import { getUser } from "@/lib/auth/users";
 import type { Role } from "@/lib/auth/rbac";
 import { listAppts, type Appt } from "./appointments";
 import { listInvoices, type Invoice } from "./billing";
 import { listItems, listRx, moves, stock, usable } from "./pharmacy";
-import { getVisit, visitOfAppt, visitsOfPatient, type Visit } from "./visits";
+import { visitsOfPatient, type Visit } from "./visits";
 import { addDays, todayWita } from "./time";
 
 export const WAIT_TARGET_MIN = 20;
@@ -24,17 +25,31 @@ export const sectionsFor = (role: Role) =>
   : role === "apoteker" ? ["pharmacy"] : [];
 
 export async function analytics(user: { id: string; role: Role }, days: number) {
-  const sections = sectionsFor(user.role);
-  const to = todayWita(), from = addDays(to, -(days - 1));
+  const to = todayWita();
   const doctorId = user.role === "dokter" ? user.id : undefined;
-  const out: Record<string, unknown> = { from, to, days, sections, waitTarget: WAIT_TARGET_MIN };
-  if (sections.includes("pharmacy")) out.pharmacy = await pharmacy();
-  if (sections.length === 1 && sections[0] === "pharmacy") return out;
+  return memoByRev(`analytics:${user.role}:${doctorId ?? "all"}:${days}:${to}`, () => computeAnalytics(user, days, to, doctorId));
+}
 
-  const appts = await listAppts({ from, to, doctorId });
+async function computeAnalytics(user: { id: string; role: Role }, days: number, to: string, doctorId: string | undefined) {
+  const sections = sectionsFor(user.role);
+  const from = addDays(to, -(days - 1));
+  const out: Record<string, unknown> = { from, to, days, sections, waitTarget: WAIT_TARGET_MIN };
+  if (sections.length === 1 && sections[0] === "pharmacy") {
+    out.pharmacy = await pharmacy();
+    return out;
+  }
+
+  const needsInvoices = sections.includes("revenue") || (sections.includes("doctors") && user.role === "superadmin");
+  const [pharmacyData, appts, allInvoices] = await Promise.all([
+    sections.includes("pharmacy") ? pharmacy() : Promise.resolve(undefined),
+    listAppts({ from, to, doctorId }),
+    needsInvoices ? listInvoices({ limit: 5000 }) : Promise.resolve([] as Invoice[]),
+  ]);
+  if (pharmacyData !== undefined) out.pharmacy = pharmacyData;
+
   const done = appts.filter((a) => a.status === "selesai");
-  const visitIds = await Promise.all(done.map((a) => visitOfAppt(a.id)));
-  const visits = ((await Promise.all(visitIds.map((id) => (id ? getVisit(id) : null)))).filter(Boolean) as Visit[]).filter((v) => v.status === "selesai");
+  const visitIds = done.length ? ((await db().mget<string>(...done.map((a) => `visit:appt:${a.id}`))).filter(Boolean) as string[]) : [];
+  const visits = visitIds.length ? ((await db().mget<Visit>(...visitIds.map((id) => `visit:${id}`))).filter(Boolean) as Visit[]).filter((v) => v.status === "selesai") : [];
   const dates = Array.from({ length: days }, (_, i) => addDays(from, i));
 
   // --- visits
@@ -97,7 +112,7 @@ export async function analytics(user: { id: string; role: Role }, days: number) 
 
   // --- revenue (by invoice visit date; cash-in by payment date)
   if (sections.includes("revenue")) {
-    const inv = (await listInvoices({ limit: 5000 })).filter((i) => i.status !== "batal" && (!doctorId || i.doctorId === doctorId));
+    const inv = allInvoices.filter((i) => i.status !== "batal" && (!doctorId || i.doctorId === doctorId));
     const inRange = (i: Invoice) => i.date >= from && i.date <= to;
     const pays = inv.flatMap((i) => i.payments.map((p) => ({ day: ymd(p.at), ...p })).filter((p) => p.day >= from && p.day <= to));
     const billed = inv.filter(inRange);
@@ -115,7 +130,7 @@ export async function analytics(user: { id: string; role: Role }, days: number) 
   // --- per doctor
   if (sections.includes("doctors")) {
     const ids = [...new Set(appts.map((a) => a.doctorId))];
-    const inv = (await listInvoices({ limit: 5000 })).filter((i) => i.status !== "batal" && i.date >= from && i.date <= to);
+    const inv = allInvoices.filter((i) => i.status !== "batal" && i.date >= from && i.date <= to);
     const rows = await Promise.all(ids.map(async (id) => {
       const mine = appts.filter((a) => a.doctorId === id), fin = mine.filter((a) => a.status === "selesai");
       const w = mine.map((a) => min(a.checkInAt, a.calledAt)).filter((x): x is number => x !== null), c = mine.map((a) => min(a.seatedAt, a.doneAt)).filter((x): x is number => x !== null);
