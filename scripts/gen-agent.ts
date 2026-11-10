@@ -73,6 +73,39 @@ const ard = {
       description: "Jam praktik, dokter, layanan dan cara membuat janji di klinik gigi.",
       capabilities: ["clinic-info", "appointment-booking"],
       representativeQueries: ["Jam buka klinik gigi Estaka", "Cara membuat janji dokter gigi di Estaka", "Dokter gigi spesialis konservasi di Makassar"],
+      trustManifest: {
+        identity: base,
+      },
+    },
+  ],
+};
+
+const aiCatalog = {
+  specVersion: "1.0",
+  entries: [
+    {
+      identifier: `urn:air:${host}:estaka:clinic-skill`,
+      displayName: `${clinic.name}: informasi dan janji temu`,
+      type: "text/markdown",
+      url: `${base}/.well-known/agent-skills/estaka/SKILL.md`,
+      description: "Jam praktik, dokter, layanan dan cara membuat janji di klinik gigi.",
+      capabilities: ["clinic-info", "appointment-booking"],
+      representativeQueries: ["Jam buka klinik gigi Estaka", "Cara membuat janji dokter gigi di Estaka", "Dokter gigi spesialis konservasi di Makassar"],
+      trustManifest: {
+        identity: base,
+      },
+    },
+    {
+      identifier: `urn:air:${host}:estaka:online-booking`,
+      displayName: `${clinic.name}: reservasi janji temu online`,
+      type: "text/html",
+      url: `${base}/reservasi`,
+      description: "Formulir reservasi janji temu dokter gigi online dengan dukungan WebMCP.",
+      capabilities: ["appointment-booking", "doctor-schedule"],
+      representativeQueries: ["Reservasi dokter gigi Estaka Dental Clinic", "Jadwal praktik dokter gigi Estaka Makassar", "Daftar periksa gigi online di Estaka"],
+      trustManifest: {
+        identity: base,
+      },
     },
   ],
 };
@@ -81,4 +114,5 @@ mkdirSync("public/.well-known/agent-skills/estaka", { recursive: true });
 writeFileSync("public/llms.txt", llms);
 writeFileSync("public/.well-known/agent-skills/estaka/SKILL.md", skill);
 writeFileSync("public/.well-known/ard.json", JSON.stringify(ard, null, 2) + "\n");
+writeFileSync("public/.well-known/ai-catalog.json", JSON.stringify(aiCatalog, null, 2) + "\n");
 console.log("agent files written for", base);

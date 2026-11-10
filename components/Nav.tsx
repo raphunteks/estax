@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { L } from "./L";
 import { clinic, nav, hero, navCopy } from "@/lib/content";
 import { setLang, useLang } from "@/lib/lang";
+import { registerWebMcp } from "@/lib/webmcp";
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
@@ -13,6 +14,8 @@ export default function Nav() {
   // Links use each section's own URL; on the home page a click scrolls to the section (see Global).
   const ROUTE: Record<string, string> = { "#doctors": "/dokter", "#specialties": "/layanan", "#technology": "/teknologi", "#pricing": "/biaya", "#faq": "/faq", "#location": "/lokasi" };
   const to = (h: string) => ROUTE[h] ?? h;
+
+  useEffect(() => registerWebMcp(), []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);

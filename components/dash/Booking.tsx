@@ -26,7 +26,7 @@ export function SlotPicker({ doctorId, date, value, onPick, hold, refresh = 0 }:
     onPick(t);
   }
   if (!doctorId || !date) return null;
-  if (!slots) return <div className="h-12 animate-pulse rounded-xl bg-fg/5" aria-label="Memuat jam" />;
+  if (!slots) return <div role="status" className="h-12 animate-pulse rounded-xl bg-fg/5" aria-label="Memuat jam" />;
   const free = slots.filter((s) => s.state !== "past");
   const full = free.length > 0 && free.every((s) => s.state !== "free");
   if (!free.length) return <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted">Tidak ada jam praktik pada tanggal ini.</p>;
@@ -40,7 +40,7 @@ export function SlotPicker({ doctorId, date, value, onPick, hold, refresh = 0 }:
         ))}
       </div>
       {full && hold && <Waitlist doctorId={doctorId} date={date} />}
-      {msg && <p role="alert" className="mt-2 text-xs text-red-400">{msg}</p>}
+      {msg && <p role="alert" className="mt-2 text-xs text-[var(--bad)]">{msg}</p>}
     </div>
   );
 }
@@ -114,10 +114,15 @@ export function BookingForm({ mode, presetPatient, preset, onDone }: { mode: "st
     }
     onDone();
   }
-  if (!o) return <div className="h-32 animate-pulse rounded-2xl bg-fg/5" aria-label="Memuat" />;
+  if (!o) return <div role="status" className="h-32 animate-pulse rounded-2xl bg-fg/5" aria-label="Memuat" />;
   if (!o.doctors.length) return <p className="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-muted">Belum ada dokter dengan jadwal praktik.</p>;
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form
+      toolname={mode === "pasien" ? "portal_book_appointment" : "staff_book_appointment"}
+      tooldescription="Formulir pembuatan janji temu dokter gigi di portal atau dashboard Estaka Dental Clinic."
+      onSubmit={submit}
+      className="space-y-4"
+    >
       {mode === "staf" && (
         <div>
           <Field label="Pasien">

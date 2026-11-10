@@ -14,12 +14,12 @@ export function Manifesto() {
       const mm = gsap.matchMedia();
       mm.add(MOTION_OK, () => {
         const split = SplitText.create(".mf-text [data-l]", { aria: "none", type: "words", wordsClass: "mf-w" });
-        gsap.set(split.words, { opacity: 0.6 });
+        gsap.set(split.words, { color: "var(--muted)" });
         const tl = gsap.timeline({
           scrollTrigger: { trigger: root.current, start: "top top", end: "+=130%", pin: true, scrub: 0.7, anticipatePin: 1 },
         });
-        tl.from(".mf-eyebrow", { y: 20, opacity: 0, duration: 0.15, ease: "none" }, 0)
-          .to(split.words, { opacity: 1, stagger: 0.1, ease: "none", duration: 0.1 }, 0.05)
+        tl.from(".mf-eyebrow", { y: 16, duration: 0.15, ease: "none" }, 0)
+          .to(split.words, { color: "var(--fg)", stagger: 0.1, ease: "none", duration: 0.1 }, 0.05)
           .fromTo(".mf-line", { scaleX: 0 }, { scaleX: 1, ease: "none", duration: 1 }, 0)
           .fromTo(".mf-orb", { scale: 0.7, rotate: -20 }, { scale: 1.15, rotate: 30, ease: "none", duration: 1 }, 0);
         return () => split.revert();

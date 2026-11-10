@@ -42,17 +42,22 @@ export default function ForgotForm() {
           </Link>
         </div>
       ) : (
-        <form onSubmit={submit} noValidate>
+        <form
+          toolname="request_password_reset"
+          tooldescription="Kirim tautan pengaturan ulang kata sandi ke alamat email akun Estaka Dental Clinic."
+          onSubmit={submit}
+          noValidate
+        >
           <label className="au-in block text-sm font-medium" htmlFor="email">
             Email
           </label>
-          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" autoFocus required className={inputCls} />
+          <input id="email" name="email" type="email" toolparamdescription="Alamat email akun yang ingin diatur ulang kata sandinya." value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" autoFocus required className={inputCls} />
           {SITE_KEY && (
             <div className="mt-4 overflow-x-auto">
               <ReCAPTCHA ref={cap} sitekey={SITE_KEY} onChange={setCaptcha} onExpired={() => setCaptcha(null)} theme="dark" />
             </div>
           )}
-          <p role="alert" className="mt-3 min-h-5 text-sm text-red-400">
+          <p role="alert" className="mt-3 min-h-5 text-sm text-[var(--bad)]">
             {err}
           </p>
           <button className={`${btnCls} mt-3`} disabled={busy || !email}>

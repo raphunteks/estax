@@ -98,9 +98,9 @@ export const Card = ({ title, children, right }: { title?: string; children: Rea
 
 export function Tabs({ tabs, value, onChange }: { tabs: [string, string][]; value: string; onChange: (v: string) => void }) {
   return (
-    <div role="tablist" className="mb-6 flex gap-1 overflow-x-auto rounded-xl border border-line p-1">
+    <div role="group" aria-label="Sub-navigasi" className="no-print mb-6 flex gap-1 overflow-x-auto rounded-xl border border-line p-1">
       {tabs.map(([id, label]) => (
-        <button key={id} role="tab" aria-selected={value === id} onClick={() => onChange(id)} className={`min-h-10 shrink-0 rounded-lg px-4 text-sm transition-[background-color,color,transform] duration-150 active:scale-[0.97] ${value === id ? "bg-accent/15 text-accent" : "text-muted hover:text-fg"}`}>
+        <button key={id} type="button" aria-pressed={value === id} onClick={() => onChange(id)} className={`min-h-10 shrink-0 rounded-lg px-4 text-sm transition-[background-color,color,transform] duration-150 active:scale-[0.97] ${value === id ? "bg-accent/15 text-accent" : "text-muted hover:text-fg"}`}>
           {label}
         </button>
       ))}
@@ -117,17 +117,22 @@ export function Field({ label, children, hint }: { label: string; children: Reac
     </label>
   );
 }
-/** Every control gets a stable id and a name (browser autofill/DevTools audit); callers can still pass their own. */
-function useFieldAttrs(p: { id?: string; name?: string; placeholder?: string; "aria-label"?: string }) {
+/** Every control gets a stable id, name, and WebMCP toolparamdescription; callers can still pass their own. */
+function useFieldAttrs(p: { id?: string; name?: string; placeholder?: string; "aria-label"?: string; toolparamdescription?: string }) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
-  const hint = (p["aria-label"] ?? p.placeholder ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
-  return { id: p.id ?? `f-${uid}`, name: p.name ?? (hint || `field-${uid}`) };
+  const labelText = p["aria-label"] ?? p.placeholder ?? p.name ?? "";
+  const hint = labelText.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32);
+  return {
+    id: p.id ?? `f-${uid}`,
+    name: p.name ?? (hint || `field-${uid}`),
+    toolparamdescription: p.toolparamdescription ?? (labelText || `Input ${uid}`),
+  };
 }
 export const Input = (p: React.InputHTMLAttributes<HTMLInputElement>) => <input {...p} {...useFieldAttrs(p)} className={`${inputCls} ${p.className ?? ""}`} />;
 export const Select = (p: React.SelectHTMLAttributes<HTMLSelectElement>) => <select {...p} {...useFieldAttrs(p)} className={`${inputCls} ${p.className ?? ""}`} />;
 
 export const Badge = ({ children, tone = "muted" }: { children: React.ReactNode; tone?: "ok" | "warn" | "muted" | "bad" }) => (
-  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs ${{ ok: "border-accent/40 text-accent", warn: "border-amber-400/40 text-amber-300", bad: "border-red-400/40 text-red-300", muted: "border-line text-muted" }[tone]}`}>{children}</span>
+  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs ${{ ok: "border-accent/40 text-accent", warn: "border-[var(--warn)]/40 text-[var(--warn)]", bad: "border-[var(--bad)]/40 text-[var(--bad)]", muted: "border-line text-muted" }[tone]}`}>{children}</span>
 );
 
 /** Two-step button: first click asks, second confirms. Replaces browser confirm() dialogs. */
@@ -135,7 +140,7 @@ export function ConfirmBtn({ label, onConfirm, danger }: { label: string; onConf
   const [ask, setAsk] = useState(false);
   return ask ? (
     <span className="inline-flex gap-1">
-      <button className={`rounded-lg px-2.5 py-1.5 text-xs ${danger ? "bg-red-500/20 text-red-300" : "bg-accent/20 text-accent"}`} onClick={() => (setAsk(false), onConfirm())}>
+      <button className={`rounded-lg px-2.5 py-1.5 text-xs ${danger ? "bg-[var(--bad)]/20 text-[var(--bad)]" : "bg-accent/20 text-accent"}`} onClick={() => (setAsk(false), onConfirm())}>
         Yakin?
       </button>
       <button className="rounded-lg px-2 py-1.5 text-xs text-muted" onClick={() => setAsk(false)}>
@@ -150,7 +155,7 @@ export function ConfirmBtn({ label, onConfirm, danger }: { label: string; onConf
 }
 
 export const Empty = ({ children }: { children: React.ReactNode }) => <p className="rounded-2xl border border-dashed border-line p-8 text-center text-sm text-muted">{children}</p>;
-export const Skeleton = () => <div className="h-24 animate-pulse rounded-2xl bg-fg/5" aria-label="Memuat" />;
+export const Skeleton = () => <div role="status" className="h-24 animate-pulse rounded-2xl bg-fg/5" aria-label="Memuat" />;
 
 export const STATUS: Record<string, { label: string; tone: "ok" | "warn" | "muted" | "bad" }> = {
   menunggu: { label: "Menunggu konfirmasi", tone: "warn" }, dikonfirmasi: { label: "Dikonfirmasi", tone: "ok" }, checkin: { label: "Di ruang tunggu", tone: "warn" },

@@ -101,11 +101,11 @@ function Files() {
   return (
     <div className="space-y-4">
       <Card title="Unggah foto atau rontgen sebelumnya">
-        <form ref={form} onSubmit={up} className="grid gap-3 sm:grid-cols-2">
+        <form ref={form} toolname="upload_patient_document" tooldescription="Unggah foto gigi atau rontgen pasien." onSubmit={up} className="grid gap-3 sm:grid-cols-2">
           <Field label="Untuk"><Select name="patientId" required>{(mem ?? []).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</Select></Field>
           <Field label="Jenis"><Select name="kind"><option value="rontgen">Rontgen</option><option value="foto">Foto gigi</option><option value="lain">Lainnya</option></Select></Field>
           <Field label="Keterangan"><Input name="label" maxLength={80} placeholder="mis. Panoramik 2025" /></Field>
-          <Field label="Berkas (JPG/PNG/WebP, maks 6 MB)"><input name="file" type="file" accept="image/jpeg,image/png,image/webp" required className="block w-full text-sm" /></Field>
+          <Field label="Berkas (JPG/PNG/WebP, maks 6 MB)"><input name="file" toolparamdescription="Berkas gambar foto gigi atau rontgen (JPG/PNG/WebP)." type="file" accept="image/jpeg,image/png,image/webp" required className="block w-full text-sm" /></Field>
           <div><button className="btn btn-primary min-h-11" disabled={busy}>{busy ? "Mengunggah…" : "Unggah"}</button></div>
         </form><Msg m={msg} />
       </Card>
@@ -140,7 +140,7 @@ function Family() {
         <li key={m.id} className="glass flex items-center justify-between gap-3 rounded-2xl p-4 text-sm"><div><p className="font-medium">{m.name}{m.self && " (saya)"}</p><p className="text-xs text-muted">{m.relation ?? ""} · {fmtDate(m.birthDate)} · RM {m.rmNo ?? "belum terbit"}</p></div>
           {!m.self && <ConfirmBtn label="Hapus" danger onConfirm={() => void api(`/api/portal/keluarga?id=${m.id}`, "DELETE").then(load)} />}</li>))}</ul>}
       <Card title="Tambah anggota keluarga">
-        <form onSubmit={add} className="grid gap-3 sm:grid-cols-2">
+        <form toolname="add_family_member" tooldescription="Tambahkan anggota keluarga ke akun pasien." onSubmit={add} className="grid gap-3 sm:grid-cols-2">
           <Field label="Nama lengkap"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required minLength={2} maxLength={80} /></Field>
           <Field label="Tanggal lahir"><Input type="date" value={f.birthDate} onChange={(e) => setF({ ...f, birthDate: e.target.value })} required /></Field>
           <Field label="Hubungan"><Select value={f.relation} onChange={(e) => setF({ ...f, relation: e.target.value })}>{["anak", "pasangan", "orang tua", "saudara", "lainnya"].map((x) => <option key={x}>{x}</option>)}</Select></Field>
@@ -169,7 +169,7 @@ export function ChatBox({ url, send }: { url: string; send: string }) {
           <div key={m.id} className={`flex ${m.from === "pasien" ? "justify-end" : ""}`}><div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${m.from === "pasien" ? "bg-accent/15" : "bg-fg/5"}`}><p className="whitespace-pre-wrap">{m.text}</p><p className="mt-0.5 text-[10px] text-muted">{m.byName} · {new Date(m.t + 8 * 3600e3).toISOString().slice(11, 16)}</p></div></div>
         ))}<div ref={end} />
       </div>
-      <form onSubmit={go} className="mt-3 flex gap-2"><Input value={text} onChange={(e) => setText(e.target.value)} maxLength={500} placeholder="Tulis pesan…" aria-label="Pesan" /><button className="btn btn-primary min-h-11">Kirim</button></form>
+      <form toolname="send_clinic_message" tooldescription="Kirim pesan singkat ke tim klinik." onSubmit={go} className="mt-3 flex gap-2"><Input value={text} onChange={(e) => setText(e.target.value)} maxLength={500} placeholder="Tulis pesan…" aria-label="Pesan" /><button className="btn btn-primary min-h-11">Kirim</button></form>
       {err && <Msg m={err} />}
     </div>
   );

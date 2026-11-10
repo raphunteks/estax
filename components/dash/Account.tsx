@@ -47,11 +47,11 @@ function Password({ mustChange }: { mustChange: boolean }) {
   return (
     <Card title="Kata sandi">
       {mustChange && <p className="mb-3 rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">Ganti kata sandi awal Anda sebelum melanjutkan.</p>}
-      <form onSubmit={save} className="max-w-sm">
+      <form toolname="change_password" tooldescription="Ganti kata sandi akun Estaka Dental Clinic." onSubmit={save} className="max-w-sm">
         <label className="text-sm font-medium" htmlFor="cur">Kata sandi saat ini</label>
-        <input id="cur" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} className={inputCls} />
+        <input id="cur" name="currentPassword" toolparamdescription="Kata sandi akun saat ini." type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} className={inputCls} />
         <label className="mt-3 block text-sm font-medium" htmlFor="nw">Kata sandi baru</label>
-        <input id="nw" type="password" autoComplete="new-password" value={nw} onChange={(e) => setNw(e.target.value)} className={inputCls} />
+        <input id="nw" name="newPassword" toolparamdescription="Kata sandi baru minimal 10 karakter kombinasi huruf dan angka." type="password" autoComplete="new-password" value={nw} onChange={(e) => setNw(e.target.value)} className={inputCls} />
         <p className="mt-2 text-xs text-muted">Minimal 10 karakter, huruf dan angka.</p>
         <Msg m={msg} />
         <button className="btn btn-primary mt-2 disabled:opacity-50" disabled={busy || !cur || !nw}>{busy ? "Menyimpan…" : "Simpan"}</button>
@@ -109,14 +109,14 @@ function TwoFa({ enabled, mandatory }: { enabled: boolean; mandatory: boolean })
           <button className="btn btn-primary mt-4" onClick={() => window.location.reload()}>Sudah saya simpan</button>
         </div>
       ) : setup ? (
-        <form onSubmit={enable} className="grid gap-5 sm:grid-cols-[auto_1fr]">
+        <form toolname="enable_two_factor_auth" tooldescription="Aktifkan autentikasi dua langkah (2FA) dengan kode 6 digit." onSubmit={enable} className="grid gap-5 sm:grid-cols-[auto_1fr]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={setup.qr} alt="QR code untuk aplikasi authenticator" width={176} height={176} className="rounded-xl bg-white p-2" />
           <div>
             <p className="text-sm">Pindai dengan Google Authenticator, Authy, atau 1Password. Atau masukkan kunci manual:</p>
             <p className="mt-1 break-all font-mono text-xs text-muted">{setup.secret}</p>
             <label className="mt-4 block text-sm font-medium" htmlFor="c">Kode 6 digit</label>
-            <input id="c" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className={`${inputCls} max-w-48 text-center font-mono text-xl tracking-[0.3em]`} />
+            <input id="c" name="totpCode" toolparamdescription="Kode 6 digit dari aplikasi authenticator." inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className={`${inputCls} max-w-48 text-center font-mono text-xl tracking-[0.3em]`} />
             <Msg m={msg} />
             <button className="btn btn-primary mt-2 disabled:opacity-50" disabled={code.length !== 6}>Aktifkan</button>
           </div>
@@ -127,11 +127,11 @@ function TwoFa({ enabled, mandatory }: { enabled: boolean; mandatory: boolean })
           {mandatory ? (
             <p className="mt-2 text-sm text-muted">Peran Anda mewajibkan 2FA, sehingga tidak dapat dinonaktifkan.</p>
           ) : (
-            <form onSubmit={disable} className="mt-4 max-w-sm">
+            <form toolname="disable_two_factor_auth" tooldescription="Nonaktifkan autentikasi dua langkah (2FA) dengan kata sandi dan kode 6 digit." onSubmit={disable} className="mt-4 max-w-sm">
               <label className="text-sm font-medium" htmlFor="dpw">Kata sandi</label>
-              <input id="dpw" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} className={inputCls} />
+              <input id="dpw" name="password" toolparamdescription="Kata sandi akun untuk konfirmasi penonaktifan 2FA." type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} className={inputCls} />
               <label className="mt-3 block text-sm font-medium" htmlFor="dc">Kode 6 digit</label>
-              <input id="dc" inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className={inputCls} />
+              <input id="dc" name="totpCode" toolparamdescription="Kode 6 digit dari aplikasi authenticator." inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className={inputCls} />
               <Msg m={msg} />
               <button className="btn btn-ghost mt-2 disabled:opacity-50" disabled={!pw || code.length !== 6}>Nonaktifkan</button>
             </form>
@@ -161,9 +161,9 @@ function Sessions() {
   return (
     <Card title="Sesi aktif">
       {err ? (
-        <p className="text-sm text-red-400">Gagal memuat sesi.</p>
+        <p className="text-sm text-[var(--bad)]">Gagal memuat sesi.</p>
       ) : !list ? (
-        <div className="h-16 animate-pulse rounded-xl bg-fg/5" aria-label="Memuat" />
+        <div role="status" className="h-16 animate-pulse rounded-xl bg-fg/5" aria-label="Memuat" />
       ) : (
         <>
           <ul className="divide-y divide-line">
@@ -223,8 +223,8 @@ function Profile(p: Props) {
           <p className="mt-2 text-xs text-muted">PNG, JPG, HEIC, WebP, atau SVG (maksimal 10 MB). Lokasi (EXIF) dihapus otomatis.</p>
         </div>
       </div>
-      <form onSubmit={saveName} className="mt-5 grid max-w-xl gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-        <div><label className="text-sm font-medium" htmlFor="pname">Nama</label><input id="pname" value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></div>
+      <form toolname="update_profile_name" tooldescription="Perbarui nama tampilan profil pengguna." onSubmit={saveName} className="mt-5 grid max-w-xl gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div><label className="text-sm font-medium" htmlFor="pname">Nama</label><input id="pname" name="name" toolparamdescription="Nama lengkap pengguna." value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></div>
         <button className="btn btn-primary disabled:opacity-50" disabled={name.trim().length < 2 || name === p.name}>Simpan</button>
       </form>
       <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">

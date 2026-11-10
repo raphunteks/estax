@@ -48,7 +48,7 @@ export default function Footer() {
           ))}
         </ul>
       </nav>
-      <p className="ft-mark display relative select-none overflow-hidden px-4 pt-6 text-center text-[clamp(5rem,24vw,22rem)] leading-[0.85] text-fg" aria-label={clinic.name}>
+      <p className="ft-mark display relative select-none overflow-hidden px-4 pt-6 text-center text-[clamp(5rem,24vw,22rem)] leading-[0.85] text-fg" aria-hidden="true">
         Estaka<span className="text-accent">.</span>
       </p>
     </footer>

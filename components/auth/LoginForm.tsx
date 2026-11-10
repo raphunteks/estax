@@ -103,6 +103,8 @@ export default function LoginForm({ next }: { next?: string }) {
       <AuthShell title="Kode verifikasi" sub="Masukkan 6 digit dari aplikasi authenticator Anda, atau satu kode cadangan.">
         <form
           ref={card}
+          toolname="verify_totp_code"
+          tooldescription="Verifikasi kode autentikasi dua faktor (2FA) 6 digit untuk masuk ke Estaka Dental Clinic."
           onSubmit={(e) => {
             e.preventDefault();
             void submitCode(code);
@@ -113,6 +115,8 @@ export default function LoginForm({ next }: { next?: string }) {
           </label>
           <input
             id="code"
+            name="code"
+            toolparamdescription="Kode verifikasi 6 digit dari aplikasi authenticator atau kode cadangan."
             value={code}
             onChange={(e) => {
               const v = e.target.value.replace(/\s/g, "");
@@ -126,7 +130,7 @@ export default function LoginForm({ next }: { next?: string }) {
             className={`${inputCls} text-center font-mono text-2xl tracking-[0.4em]`}
             aria-describedby="err"
           />
-          <p id="err" role="alert" className="mt-3 min-h-5 text-sm text-red-400">
+          <p id="err" role="alert" className="mt-3 min-h-5 text-sm text-[var(--bad)]">
             {err}
           </p>
           <button className={`${btnCls} mt-3`} disabled={busy || code.length < 6}>
@@ -141,21 +145,27 @@ export default function LoginForm({ next }: { next?: string }) {
 
   return (
     <AuthShell title="Masuk" sub="Untuk dokter, staf, apoteker, dan pasien Estaka Dental Clinic.">
-      <form ref={card} onSubmit={submitCred} noValidate>
+      <form
+        ref={card}
+        toolname="login_estaka"
+        tooldescription="Masuk ke portal pasien atau dashboard staf Estaka Dental Clinic dengan email dan kata sandi."
+        onSubmit={submitCred}
+        noValidate
+      >
         <label className="au-in block text-sm font-medium" htmlFor="email">
           Email
         </label>
-        <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" autoFocus required className={inputCls} />
+        <input id="email" name="email" type="email" toolparamdescription="Alamat email akun pasien atau staf Estaka Dental Clinic." value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" autoFocus required className={inputCls} />
         <label className="au-in mt-4 block text-sm font-medium" htmlFor="pw">
           Kata sandi
         </label>
-        <input id="pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required className={inputCls} />
+        <input id="pw" name="password" type="password" toolparamdescription="Kata sandi akun Estaka Dental Clinic." value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required className={inputCls} />
         {SITE_KEY && (
           <div className="au-in mt-4 overflow-x-auto">
             <ReCAPTCHA ref={cap} sitekey={SITE_KEY} onChange={setCaptcha} onExpired={() => setCaptcha(null)} theme="dark" />
           </div>
         )}
-        <p role="alert" className="mt-3 min-h-5 text-sm text-red-400">
+        <p role="alert" className="mt-3 min-h-5 text-sm text-[var(--bad)]">
           {err}
         </p>
         {unverified && (

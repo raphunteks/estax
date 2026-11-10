@@ -1,13 +1,9 @@
 "use client";
 
 import { useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
+import { MOTION_OK, ScrollTrigger, gsap, useGSAP } from "@/lib/gsap";
 import { L } from "./L";
 import { doctors, journey, specialties, statsCopy } from "@/lib/content";
-
-gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 /** Only real, derived numbers. Nothing here is invented. */
 const items = [
@@ -22,17 +18,16 @@ export default function Stats() {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
+      mm.add(MOTION_OK, () => {
         gsap.utils.toArray<HTMLElement>("[data-count]").forEach((el) => {
           const end = Number(el.dataset.count);
           const o = { v: 0 };
-          el.textContent = "0";
           ScrollTrigger.create({
             trigger: el,
             start: "top 88%",
             once: true,
             onEnter: () =>
-              gsap.to(o, { v: end, duration: 1.6, ease: "power2.out", onUpdate: () => (el.textContent = String(Math.round(o.v))) }),
+              gsap.to(o, { v: end, duration: 1.4, ease: "power2.out", onUpdate: () => (el.textContent = String(Math.round(o.v))) }),
           });
         });
       });
@@ -48,13 +43,13 @@ export default function Stats() {
         </p>
         <dl className="mt-8 grid grid-cols-3 gap-4 text-center sm:gap-10">
           {items.map((it, i) => (
-            <div key={i} data-reveal>
-              <dd className="display text-[clamp(3rem,10vw,6rem)] text-accent" data-count={it.n}>
-                {it.n}
-              </dd>
+            <div key={i} className="flex flex-col-reverse" data-reveal>
               <dt className="mt-1 text-xs uppercase tracking-[0.18em] text-muted sm:text-sm">
                 <L v={it.label} />
               </dt>
+              <dd className="display text-[clamp(3rem,10vw,6rem)] text-accent" data-count={it.n}>
+                {it.n}
+              </dd>
             </div>
           ))}
         </dl>

@@ -1,0 +1,43 @@
+{
+  "specVersion": "1.0",
+  "entries": [
+    {
+      "identifier": "urn:air:estakadentalclinic.vercel.app:estaka:clinic-skill",
+      "displayName": "Estaka Dental Clinic: informasi dan janji temu",
+      "type": "text/markdown",
+      "url": "https://estakadentalclinic.vercel.app/.well-known/agent-skills/estaka/SKILL.md",
+      "description": "Jam praktik, dokter, layanan dan cara membuat janji di klinik gigi.",
+      "capabilities": [
+        "clinic-info",
+        "appointment-booking"
+      ],
+      "representativeQueries": [
+        "Jam buka klinik gigi Estaka",
+        "Cara membuat janji dokter gigi di Estaka",
+        "Dokter gigi spesialis konservasi di Makassar"
+      ],
+      "trustManifest": {
+        "identity": "https://estakadentalclinic.vercel.app"
+      }
+    },
+    {
+      "identifier": "urn:air:estakadentalclinic.vercel.app:estaka:online-booking",
+      "displayName": "Estaka Dental Clinic: reservasi janji temu online",
+      "type": "text/html",
+      "url": "https://estakadentalclinic.vercel.app/reservasi",
+      "description": "Formulir reservasi janji temu dokter gigi online dengan dukungan WebMCP.",
+      "capabilities": [
+        "appointment-booking",
+        "doctor-schedule"
+      ],
+      "representativeQueries": [
+        "Reservasi dokter gigi Estaka Dental Clinic",
+        "Jadwal praktik dokter gigi Estaka Makassar",
+        "Daftar periksa gigi online di Estaka"
+      ],
+      "trustManifest": {
+        "identity": "https://estakadentalclinic.vercel.app"
+      }
+    }
+  ]
+}

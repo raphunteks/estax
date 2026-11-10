@@ -14,30 +14,37 @@
   --accent: #8a9cff;
   --accent-ink: #0a0d18;
   --glow: rgba(138, 156, 255, 0.18);
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --bad: #ff7a8a;
   color-scheme: dark;
 }
 :root[data-theme="siang"] {
   --bg: #f6f1e4; --surface: #fbf8ef; --surface2: #ece5d2;
   --fg: #0f1f5c; --muted: rgba(15, 31, 92, 0.72); --line: rgba(15, 31, 92, 0.14); --card: rgba(15, 31, 92, 0.04);
   --accent: #1a3bb5; --accent-ink: #ffffff; --glow: rgba(26, 59, 181, 0.14);
+  --ok: #0f766e; --warn: #92400e; --bad: #b91c1c;
   color-scheme: light;
 }
 :root[data-theme="aren"] {
   --bg: #f4e8d0; --surface: #faf1de; --surface2: #ead9b8;
   --fg: #3a1f0e; --muted: rgba(58, 31, 14, 0.74); --line: rgba(58, 31, 14, 0.16); --card: rgba(58, 31, 14, 0.04);
-  --accent: #96481a; --accent-ink: #ffffff; --glow: rgba(150, 72, 26, 0.16);
+  --accent: #823d14; --accent-ink: #ffffff; --glow: rgba(130, 61, 20, 0.16);
+  --ok: #0f766e; --warn: #92400e; --bad: #b91c1c;
   color-scheme: light;
 }
 :root[data-theme="pandan"] {
   --bg: #eaf3ea; --surface: #f4faf4; --surface2: #d9e8da;
   --fg: #12301f; --muted: rgba(18, 48, 31, 0.74); --line: rgba(18, 48, 31, 0.15); --card: rgba(18, 48, 31, 0.04);
   --accent: #2b6546; --accent-ink: #ffffff; --glow: rgba(43, 101, 70, 0.15);
+  --ok: #0f766e; --warn: #92400e; --bad: #b91c1c;
   color-scheme: light;
 }
 :root[data-theme="sunrise"] {
   --bg: #fdeee3; --surface: #fff6ef; --surface2: #f6dccb;
   --fg: #3b1420; --muted: rgba(59, 20, 32, 0.74); --line: rgba(59, 20, 32, 0.15); --card: rgba(59, 20, 32, 0.04);
-  --accent: #a93618; --accent-ink: #ffffff; --glow: rgba(169, 54, 24, 0.15);
+  --accent: #962e13; --accent-ink: #ffffff; --glow: rgba(150, 46, 19, 0.15);
+  --ok: #0f766e; --warn: #92400e; --bad: #b91c1c;
   color-scheme: light;
 }
 
@@ -101,32 +108,28 @@ html:not([data-lang="en"]) [data-l="en"] {
   display: none;
 }
 
-/* Initial states for GSAP (only when JS + motion allowed, see layout script). */
+/* Initial states for GSAP: transform-only so content is always readable and LCP paints at frame 0. */
 html.js [data-reveal] {
-  opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(16px);
 }
-html.js .cs-a {
-  opacity: 0;
-}
-/* Hero entrance is pure CSS: no JS needed, headline is the LCP element and paints at once. */
-@keyframes hRise { from { opacity: 0.85; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes hFade { from { opacity: 0.85; } to { opacity: 1; } }
-@keyframes hMedia { from { transform: scale(1.04); } to { transform: scale(1); } }
-@keyframes hPop { from { transform: translateY(12px) scale(0.96); } to { transform: translateY(0) scale(1); } }
+/* Hero entrance is pure CSS: no JS needed, headline is the LCP element and paints at once with opacity 1. */
+@keyframes hRise { from { opacity: 1; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes hFade { from { opacity: 1; } to { opacity: 1; } }
+@keyframes hMedia { from { transform: scale(1.03); } to { transform: scale(1); } }
+@keyframes hPop { from { transform: translateY(10px) scale(0.97); } to { transform: translateY(0) scale(1); } }
 @keyframes hDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes mq { to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: no-preference) {
   .h-eyebrow, .h-title, .h-sub, .h-actions { will-change: transform; }
-  .h-eyebrow { animation: hRise 0.6s 0.02s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-  .h-title { animation: hRise 0.7s 0.04s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-  .h-sub { animation: hRise 0.7s 0.08s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-  .h-actions { animation: hRise 0.7s 0.12s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
-  .h-media { animation: hMedia 1.0s 0.02s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-  .h-draw { stroke-dasharray: 1; animation: hDraw 1.4s 0.1s ease-in-out both; }
-  .h-chip { animation: hPop 0.6s 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) backwards; }
-  .h-chip + .h-chip { animation-delay: 0.5s; }
-  .h-scroll { animation: hFade 0.8s 0.6s ease backwards; }
+  .h-eyebrow { animation: hRise 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .h-title { animation: hRise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .h-sub { animation: hRise 0.65s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .h-actions { animation: hRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .h-media { animation: hMedia 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .h-draw { stroke-dasharray: 1; animation: hDraw 1.2s ease-in-out both; }
+  .h-chip { animation: hPop 0.55s 0.15s cubic-bezier(0.34, 1.4, 0.64, 1) both; }
+  .h-chip + .h-chip { animation-delay: 0.22s; }
+  .h-scroll { animation: hFade 0.6s ease both; }
   .mq-track { animation: mq 38s linear infinite; }
 }
 /* Title stays visible until SplitText takes over (avoids a flash if JS is slow), then words are masked. */
@@ -310,13 +313,8 @@ details[open] .faq-plus { transform: rotate(45deg); }
 .spot:hover::before {
   opacity: 1;
 }
-/* Head heading is hidden until its own timeline plays (motion only). */
-html.js .hd {
-  opacity: 0;
-}
-
 /* Odontogram status colors (fills, not text; text always uses --fg). */
-:root { --bad: #d64545; --ok: #2f9e6a; --info: var(--accent); }
+:root { --info: var(--accent); }
 
 @media print {
   aside, header, nav, .no-print, [role="tablist"] { display: none !important; }

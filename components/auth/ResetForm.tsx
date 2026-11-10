@@ -34,16 +34,21 @@ export default function ResetForm({ token }: { token: string }) {
           </Link>
         </div>
       ) : (
-        <form onSubmit={submit} noValidate>
+        <form
+          toolname="set_new_password"
+          tooldescription="Simpan kata sandi baru untuk akun Estaka Dental Clinic."
+          onSubmit={submit}
+          noValidate
+        >
           <label className="block text-sm font-medium" htmlFor="pw">
             Kata sandi baru
           </label>
-          <input id="pw" type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" autoFocus className={inputCls} />
+          <input id="pw" name="password" type="password" toolparamdescription="Kata sandi baru minimal 10 karakter kombinasi huruf dan angka." value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" autoFocus className={inputCls} />
           <label className="mt-4 block text-sm font-medium" htmlFor="pw2">
             Ulangi kata sandi
           </label>
-          <input id="pw2" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" className={inputCls} />
-          <p role="alert" className="mt-3 min-h-5 text-sm text-red-400">
+          <input id="pw2" name="passwordConfirm" type="password" toolparamdescription="Ulangi kata sandi baru untuk konfirmasi." value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" className={inputCls} />
+          <p role="alert" className="mt-3 min-h-5 text-sm text-[var(--bad)]">
             {err}
           </p>
           <button className={`${btnCls} mt-3`} disabled={busy || !pw || !pw2}>

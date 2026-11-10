@@ -13,22 +13,19 @@ export function useLazyGsap(scope: RefObject<HTMLElement | null>, setup: (g: G) 
     let dead = false;
     let started = false;
     let ctx: { revert: () => void } | undefined;
-    const evs = ["scroll", "pointermove", "pointerdown", "touchstart", "keydown"] as const;
+    const evs = ["scroll", "wheel", "pointermove", "pointerdown", "touchstart", "keydown"] as const;
     const start = () => {
       if (started) return;
       started = true;
       evs.forEach((e) => window.removeEventListener(e, start));
-      clearTimeout(timer);
       import("@/lib/gsap").then((g) => {
         if (!dead) ctx = g.gsap.context(() => setup(g), scope.current ?? undefined);
       });
     };
-    // GSAP only adds depth effects, so it waits for the first user intent (or 5 s) and stays out of the load-time main thread budget.
+    // GSAP only adds depth effects, so it waits for the first user intent and stays completely out of the load-time main thread budget.
     evs.forEach((e) => window.addEventListener(e, start, { once: true, passive: true }));
-    const timer = setTimeout(start, 5000);
     return () => {
       dead = true;
-      clearTimeout(timer);
       evs.forEach((e) => window.removeEventListener(e, start));
       ctx?.revert();
     };

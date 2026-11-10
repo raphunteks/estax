@@ -104,7 +104,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="image_src" href={`${clinic.siteUrl}/og-image.jpg`} />
+        <link rel="ai-catalog" href="/.well-known/ai-catalog.json" />
         <link rel="ard" href="/.well-known/ard.json" />
+        <link rel="llms-txt" href="/llms.txt" />
         <meta property="og:image" content={`${clinic.siteUrl}/og-image.jpg`} />
         <meta property="og:image:secure_url" content={`${clinic.siteUrl}/og-image.jpg`} />
         <meta property="og:image:width" content="1200" />

@@ -11,12 +11,12 @@ function PreVisit({ id }: { id: string }) {
   const send = async (e: React.FormEvent) => { e.preventDefault(); const r = await api(`/api/appointments/${id}/previsit`, "POST", { ...f, allergies: f.allergies || undefined, medications: f.medications || undefined, conditions: f.conditions || undefined }); setMsg(r.ok ? "Terkirim. Dokter akan melihatnya sebelum pemeriksaan." : r.message ?? "Gagal."); };
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
   return (
-    <form onSubmit={send} className="mt-3 grid gap-2 rounded-xl border border-line p-3 text-sm">
+    <form toolname="submit_previsit_info" tooldescription="Kirim informasi keluhan, alergi, dan obat sebelum kedatangan ke klinik." onSubmit={send} className="mt-3 grid gap-2 rounded-xl border border-line p-3 text-sm">
       <p className="font-medium">Isi data sebelum datang</p>
-      <input aria-label="Keluhan utama" placeholder="Keluhan utama" required minLength={3} maxLength={500} value={f.complaint} onChange={set("complaint")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
-      <input aria-label="Alergi" placeholder="Alergi (obat/makanan)" maxLength={300} value={f.allergies} onChange={set("allergies")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
-      <input aria-label="Obat yang diminum" placeholder="Obat yang sedang diminum" maxLength={300} value={f.medications} onChange={set("medications")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
-      <input aria-label="Penyakit penyerta" placeholder="Penyakit penyerta (mis. diabetes)" maxLength={300} value={f.conditions} onChange={set("conditions")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
+      <input name="complaint" toolparamdescription="Keluhan utama gigi dan mulut." aria-label="Keluhan utama" placeholder="Keluhan utama" required minLength={3} maxLength={500} value={f.complaint} onChange={set("complaint")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
+      <input name="allergies" toolparamdescription="Riwayat alergi obat atau makanan." aria-label="Alergi" placeholder="Alergi (obat/makanan)" maxLength={300} value={f.allergies} onChange={set("allergies")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
+      <input name="medications" toolparamdescription="Obat yang sedang rutin diminum." aria-label="Obat yang diminum" placeholder="Obat yang sedang diminum" maxLength={300} value={f.medications} onChange={set("medications")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
+      <input name="conditions" toolparamdescription="Penyakit penyerta seperti diabetes atau hipertensi." aria-label="Penyakit penyerta" placeholder="Penyakit penyerta (mis. diabetes)" maxLength={300} value={f.conditions} onChange={set("conditions")} className="min-h-10 rounded-lg border border-line bg-transparent px-3" />
       <div className="flex items-center gap-3"><button className="btn btn-primary min-h-10">Kirim</button><span role="status" className="text-xs text-muted">{msg}</span></div>
     </form>
   );

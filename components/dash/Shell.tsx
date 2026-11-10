@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Activity, CalendarDays, ChevronDown, Cog, Globe, Home, Lock, LogOut, PanelLeftClose, PanelLeftOpen, ScrollText, ShieldCheck, Tag, MessageCircle, Star, Sparkles, Stethoscope, User, Users, Wallet, Pill, BarChart3, X, type LucideIcon } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap-lite";
 import Logo from "@/components/Logo";
+import { registerWebMcp } from "@/lib/webmcp";
 import BottomNav from "./BottomNav";
 import { api } from "./kit";
 
@@ -56,6 +57,9 @@ export default function Shell({ items, user, locked, children }: { items: SideIt
 
   // Mobile drawer: slides on transform only, ease-out 240ms. Under reduced motion it just toggles visibility.
   const { contextSafe } = useGSAP({ scope: root });
+  useEffect(() => {
+    registerWebMcp();
+  }, []);
   const slide = contextSafe((show: boolean) => {
     if (!window.matchMedia("(max-width: 1023px)").matches) return;
     const mm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -196,6 +200,18 @@ export default function Shell({ items, user, locked, children }: { items: SideIt
         <main id="main" className="mx-auto w-full max-w-6xl px-4 py-8 pb-32 sm:px-6 lg:pb-8">
           {locked && <p role="status" className="mb-6 flex items-start gap-3 rounded-2xl border border-accent/40 bg-accent/10 px-4 py-3 text-sm"><Lock size={16} className="mt-0.5 shrink-0 text-accent" aria-hidden="true" />Menu lain terbuka setelah Anda mengganti kata sandi awal dan mengaktifkan 2FA (wajib untuk superadmin dan dokter).</p>}
           {children}
+          <form
+            action="/dashboard/pasien"
+            method="get"
+            toolname="dashboard_search_patient"
+            tooldescription="Cari data pasien berdasarkan nama, nomor rekam medis (No. RM), atau NIK di dashboard Estaka Dental Clinic."
+            className="sr-only"
+            aria-label="Pencarian cepat pasien"
+          >
+            <label htmlFor="dash-quick-patient-q">Cari pasien</label>
+            <input id="dash-quick-patient-q" name="q" type="search" toolparamdescription="Kata kunci pencarian pasien (nama lengkap, No. RM, atau NIK)." />
+            <button type="submit">Cari</button>
+          </form>
         </main>
       </div>
       <BottomNav role={user.role} locked={locked} items={items} icons={ICONS} />

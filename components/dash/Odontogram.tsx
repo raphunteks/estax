@@ -162,7 +162,7 @@ export default function Odontogram({ value, onChange, previous, readOnly = false
       </div>
 
       {!readOnly && !simple && (
-        <form className="mt-4 flex flex-wrap items-end gap-2" onSubmit={(e) => (e.preventDefault(), apply(form.tooth, form.surface))} aria-label="Terapkan tanpa klik gambar">
+        <form toolname="apply_odontogram_mark" tooldescription="Terapkan penanda pemeriksaan pada gigi dan permukaan di odontogram." className="mt-4 flex flex-wrap items-end gap-2" onSubmit={(e) => (e.preventDefault(), apply(form.tooth, form.surface))} aria-label="Terapkan tanpa klik gambar">
           <label className="text-xs text-muted">Gigi
             <Select value={form.tooth} onChange={(e) => setForm({ ...form, tooth: e.target.value })}>{[...ALL_TEETH].map((t) => <option key={t}>{t}</option>)}</Select>
           </label>

@@ -17,8 +17,8 @@ export default function Services() {
       mm.add(MOTION_OK, () => {
         gsap.fromTo(
           ".sv-card",
-          { y: 70, opacity: 0, rotationX: -8, transformPerspective: 900 },
-          { y: 0, opacity: 1, rotationX: 0, duration: 1.1, stagger: 0.14, ease: "power3.out", scrollTrigger: { trigger: ".sv-grid", start: "top 82%", once: true } },
+          { y: 40, rotationX: -6, transformPerspective: 900 },
+          { y: 0, rotationX: 0, duration: 0.9, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: ".sv-grid", start: "top 82%", once: true } },
         );
         gsap.utils.toArray<HTMLElement>(".sv-num").forEach((n) =>
           gsap.fromTo(n, { yPercent: 25 }, { yPercent: -25, ease: "none", scrollTrigger: { trigger: n, start: "top bottom", end: "bottom top", scrub: 0.6 } }),

@@ -28,7 +28,7 @@ function PromoForm({ init, id, canActivate, tariffs, onDone, onCancel }: { init:
     r.ok ? onDone() : setMsg(r.message ?? "Gagal menyimpan.");
   }
   return (
-    <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
+    <form toolname="save_clinic_promo" tooldescription="Simpan atau perbarui program promosi layanan klinik." onSubmit={save} className="grid gap-3 sm:grid-cols-2">
       <div className="sm:col-span-2"><Field label="Nama promo"><Input required value={f.name} maxLength={80} onChange={(e) => set("name", e.target.value)} placeholder="Mis. Diskon Scaling Hari Kesehatan Gigi" /></Field></div>
       <div className="sm:col-span-2"><Field label="Deskripsi singkat" hint="Tampil di akun pasien dan di notifikasi."><Input value={f.desc} maxLength={400} onChange={(e) => set("desc", e.target.value)} /></Field></div>
       <Field label="Jenis"><Select value={f.kind} onChange={(e) => set("kind", e.target.value as Promo["kind"])}>{Object.entries(KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>

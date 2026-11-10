@@ -27,12 +27,12 @@ export default function Global() {
         scrollTrigger: { start: 0, end: "max", scrub: 0.3 },
       });
 
-      // Every section eases in as it scrolls into view (all viewports, scrubbed so it follows the finger/wheel).
+      // Every section eases in as it scrolls into view (transform-only so text always maintains 100% WCAG contrast).
       gsap.utils.toArray<HTMLElement>("section[id]").forEach((sec) => {
         if (sec.id === "doctors" || sec.id === "top") return; // pinned / hero have their own scroll choreography
         const inner = sec.firstElementChild as HTMLElement | null;
         if (!inner) return;
-        gsap.fromTo(inner, { y: 44, opacity: 0.35 }, { y: 0, opacity: 1, ease: "none", scrollTrigger: { trigger: sec, start: "top 96%", end: "top 62%", scrub: 0.4 } });
+        gsap.fromTo(inner, { y: 32 }, { y: 0, ease: "none", scrollTrigger: { trigger: sec, start: "top 96%", end: "top 62%", scrub: 0.4 } });
       });
 
       // Generic reveal for [data-reveal]. Elements inside other motion components opt out with data-own.
@@ -40,7 +40,7 @@ export default function Global() {
         start: "top 88%",
         once: true,
         onEnter: (els) =>
-          gsap.to(els, { opacity: 1, y: 0, duration: 1, ease: "power3.out", stagger: 0.08, overwrite: true, clearProps: "transform" }),
+          gsap.to(els, { y: 0, duration: 0.85, ease: "power3.out", stagger: 0.06, overwrite: true, clearProps: "transform" }),
       });
 
       // Header hides on scroll down, returns on scroll up. Never hides while the menu is open.

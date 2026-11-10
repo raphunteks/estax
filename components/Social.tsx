@@ -20,7 +20,7 @@ function TeamInner() {
   useGSAP(
     () => {
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(".tm-card", { y: 60, opacity: 0, duration: 1, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: ".tm-grid", start: "top 82%", once: true } });
+        gsap.from(".tm-card", { y: 36, duration: 0.85, stagger: 0.08, ease: "power3.out", scrollTrigger: { trigger: ".tm-grid", start: "top 82%", once: true } });
       });
     },
     { scope: root },
@@ -101,7 +101,7 @@ function ResultsInner() {
   useGSAP(
     () => {
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(".rs-item", { y: 50, opacity: 0, duration: 1, stagger: 0.12, ease: "power3.out", scrollTrigger: { trigger: ".rs-grid", start: "top 82%", once: true } });
+        gsap.from(".rs-item", { y: 32, duration: 0.85, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: ".rs-grid", start: "top 82%", once: true } });
       });
     },
     { scope: root },
@@ -139,7 +139,7 @@ function TestimonialsInner() {
   useGSAP(
     () => {
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(".ts-card", { y: 50, opacity: 0, duration: 1, stagger: 0.12, ease: "power3.out", scrollTrigger: { trigger: ".ts-grid", start: "top 82%", once: true } });
+        gsap.from(".ts-card", { y: 32, duration: 0.85, stagger: 0.1, ease: "power3.out", scrollTrigger: { trigger: ".ts-grid", start: "top 82%", once: true } });
       });
     },
     { scope: root },

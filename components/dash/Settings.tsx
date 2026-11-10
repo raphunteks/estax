@@ -128,7 +128,7 @@ function Poliklinik({ canEdit }: { canEdit: boolean }) {
         ))}
       </ul>
       {canEdit && (
-        <form className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); const id = slug(name); if (id.length < 2 || data.some((x) => x.id === id)) return; setData([...data, { id, name: name.trim(), active: true, color: "#f5b942" }]); setName(""); }}>
+        <form toolname="add_poliklinik" tooldescription="Tambahkan poliklinik baru ke pengaturan klinik." className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); const id = slug(name); if (id.length < 2 || data.some((x) => x.id === id)) return; setData([...data, { id, name: name.trim(), active: true, color: "#f5b942" }]); setName(""); }}>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Poliklinik baru, mis. Ortodonti" className="!mt-0" />
           <button className="btn btn-ghost shrink-0">Tambah</button>
         </form>
@@ -157,7 +157,7 @@ function PayTypes({ canEdit }: { canEdit: boolean }) {
         ))}
       </ul>
       {canEdit && (
-        <form className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); const id = slug(name); if (id.length < 2 || data.some((x) => x.id === id)) return; setData([...data, { id, name: name.trim(), kind: "asuransi", active: true, needsNumber: true }]); setName(""); }}>
+        <form toolname="add_paytype" tooldescription="Tambahkan jenis pembayaran atau asuransi baru." className="mt-4 flex gap-2" onSubmit={(e) => { e.preventDefault(); const id = slug(name); if (id.length < 2 || data.some((x) => x.id === id)) return; setData([...data, { id, name: name.trim(), kind: "asuransi", active: true, needsNumber: true }]); setName(""); }}>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama asuransi baru" className="!mt-0" />
           <button className="btn btn-ghost shrink-0">Tambah</button>
         </form>

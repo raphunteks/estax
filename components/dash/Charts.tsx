@@ -24,7 +24,7 @@ export default function Charts({ s }: { s: Stats }) {
   useGSAP(
     () => {
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(".ch-card", { y: 14, opacity: 0, duration: 0.4, stagger: 0.06, ease: "power3.out", clearProps: "all" });
+        gsap.from(".ch-card", { y: 10, duration: 0.35, stagger: 0.05, ease: "power3.out", clearProps: "transform" });
         gsap.utils.toArray<HTMLElement>(".kpi-n").forEach((el) => {
           const to = Number(el.dataset.v);
           if (!Number.isFinite(to) || to === 0) return;

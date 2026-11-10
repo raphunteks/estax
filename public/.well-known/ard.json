@@ -15,7 +15,10 @@
         "Jam buka klinik gigi Estaka",
         "Cara membuat janji dokter gigi di Estaka",
         "Dokter gigi spesialis konservasi di Makassar"
-      ]
+      ],
+      "trustManifest": {
+        "identity": "https://estakadentalclinic.vercel.app"
+      }
     }
   ]
 }

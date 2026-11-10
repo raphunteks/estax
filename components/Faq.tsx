@@ -15,8 +15,8 @@ export default function Faq() {
     () => {
       const mm = gsap.matchMedia();
       mm.add(MOTION_OK, () => {
-        gsap.from(".fq-item", { y: 30, opacity: 0, duration: 0.9, stagger: 0.08, ease: "power3.out", scrollTrigger: { trigger: ".fq-list", start: "top 85%", once: true } });
-        gsap.from(".fq-line", { scaleX: 0, transformOrigin: "left", duration: 1.2, stagger: 0.08, ease: "power3.out", scrollTrigger: { trigger: ".fq-list", start: "top 85%", once: true } });
+        gsap.from(".fq-item", { y: 20, duration: 0.75, stagger: 0.06, ease: "power3.out", scrollTrigger: { trigger: ".fq-list", start: "top 85%", once: true } });
+        gsap.from(".fq-line", { scaleX: 0, transformOrigin: "left", duration: 1.0, stagger: 0.06, ease: "power3.out", scrollTrigger: { trigger: ".fq-list", start: "top 85%", once: true } });
       });
     },
     { scope: root },
@@ -60,9 +60,9 @@ export default function Faq() {
                   </span>
                 </button>
               </h3>
-              <div id={`fq-p-${i}`} role="region" aria-labelledby={`fq-b-${i}`} className="fq-panel grid" style={{ gridTemplateRows: "0fr" }}>
+              <div id={`fq-p-${i}`} role="region" aria-labelledby={`fq-b-${i}`} aria-hidden={!openSet.has(i)} inert={!openSet.has(i)} className="fq-panel grid" style={{ gridTemplateRows: "0fr" }}>
                 <div className="overflow-hidden">
-                  <p className="fq-text max-w-xl pb-6 leading-relaxed text-muted" style={{ opacity: 0 }}>
+                  <p className="fq-text max-w-xl pb-6 leading-relaxed text-muted">
                     <L v={f.a} />
                   </p>
                 </div>

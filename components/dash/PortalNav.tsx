@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/Logo";
 import ThemeMenu from "@/components/ThemeMenu";
+import { registerWebMcp } from "@/lib/webmcp";
 import { api } from "./kit";
 
 const PORTAL_PREFETCH: Record<string, string> = {
@@ -25,6 +27,9 @@ const ITEMS: [string, string, boolean][] = [
 
 export default function PortalNav({ locked }: { locked: boolean }) {
   const path = usePathname();
+  useEffect(() => {
+    registerWebMcp();
+  }, []);
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
     window.location.assign("/masuk");
@@ -59,6 +64,18 @@ export default function PortalNav({ locked }: { locked: boolean }) {
           )}
         </nav>
         <span className="flex-1 md:hidden" /><button onClick={logout} className="min-h-10 rounded-xl border border-line px-3 text-sm text-muted transition-[transform,color] hover:text-fg active:scale-[0.97]">Keluar</button>
+        <form
+          action="/portal/janji"
+          method="get"
+          toolname="portal_quick_appointment"
+          tooldescription="Buka halaman pembuatan janji temu dokter gigi di portal pasien Estaka Dental Clinic."
+          className="sr-only"
+          aria-label="Pintasan buat janji temu"
+        >
+          <label htmlFor="portal-quick-appts-note">Catatan keluhan</label>
+          <input id="portal-quick-appts-note" name="keluhan" type="text" toolparamdescription="Keluhan atau layanan gigi yang ingin dijadwalkan." />
+          <button type="submit">Buka jadwal janji</button>
+        </form>
       </div>
     </header>
   );
@@ -86,7 +103,7 @@ export function PortalTabBar({ locked }: { locked: boolean }) {
           return (
             <li key={t.href}>
               <Link href={off ? "#" : t.href} aria-current={on ? "page" : undefined} aria-disabled={off || undefined} className={cls}>
-                {t.main ? <span className="-mt-6 grid size-14 place-items-center rounded-full bg-accent text-white shadow-lg shadow-accent/30">{t.icon}</span> : t.icon}
+                {t.main ? <span className="-mt-6 grid size-14 place-items-center rounded-full bg-accent text-accent-ink shadow-lg shadow-accent/30">{t.icon}</span> : t.icon}
                 <span>{t.label}</span>
               </Link>
             </li>

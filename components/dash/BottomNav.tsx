@@ -133,7 +133,7 @@ export default function BottomNav({ role, locked, items, icons }: { role: string
     } finally { setBusy(false); }
   }
   const cls = (on: boolean, off?: boolean) => `relative flex min-h-14 flex-col items-center justify-end gap-0.5 pb-1.5 text-[11px] font-medium transition-[color,transform] duration-150 active:scale-[0.95] ${on ? "text-accent" : "text-muted"} ${off ? "pointer-events-none opacity-40" : ""}`;
-  const dot = (n: number) => (n > 0 ? <span className="absolute right-[calc(50%-20px)] top-1 grid min-w-4 place-items-center rounded-full bg-[var(--bad)] px-1 text-[10px] font-semibold leading-4 text-white" aria-label={`${n} menunggu`}>{n > 99 ? "99+" : n}</span> : null);
+  const dot = (n: number) => (n > 0 ? <span className="absolute right-[calc(50%-20px)] top-1 grid min-w-4 place-items-center rounded-full bg-rose-700 px-1 text-[10px] font-semibold leading-4 text-white">{n > 99 ? "99+" : n}<span className="sr-only"> menunggu</span></span> : null);
   const slotEl = (s: Slot) => {
     const off = locked || !allowed(s.href);
     return (
@@ -157,7 +157,7 @@ export default function BottomNav({ role, locked, items, icons }: { role: string
           {cfg.left.map(slotEl)}
           <li>
             <button type="button" onClick={() => void centerAction()} disabled={centerDisabled} title={centerHint || undefined} aria-label={cfg.center.label + (centerHint ? `. ${centerHint}` : "")} className={`${cls(false)} w-full disabled:opacity-60`}>
-              <span className={`-mt-6 grid size-14 place-items-center rounded-full text-white shadow-lg shadow-accent/30 ${centerDisabled ? "bg-muted" : "bg-accent"}`}><cfg.center.Icon size={24} aria-hidden="true" /></span>
+              <span className={`-mt-6 grid size-14 place-items-center rounded-full shadow-lg shadow-accent/30 ${centerDisabled ? "bg-muted text-bg" : "bg-accent text-accent-ink"}`}><cfg.center.Icon size={24} aria-hidden="true" /></span>
               <span>{cfg.center.label}</span>
             </button>
           </li>

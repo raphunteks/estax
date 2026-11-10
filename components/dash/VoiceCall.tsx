@@ -1009,9 +1009,12 @@ export default function VoiceCall({ role: _role = "pasien" }: { role?: string })
 
       {/* Manual Input Fallback Bar (Keyboard / Silent environment) */}
       {state !== "idle" && (
-        <form onSubmit={handleManualSend} className="mt-4 flex items-center gap-2">
+        <form toolname="send_voice_call_text" tooldescription="Kirim pesan teks ke panggilan suara AI Estaka Dental Clinic." onSubmit={handleManualSend} className="mt-4 flex items-center gap-2">
           <input
             type="text"
+            name="utterance"
+            aria-label="Ketik ucapan Anda"
+            toolparamdescription="Teks ucapan yang ingin dikirim ke asisten suara AI."
             value={customText}
             onChange={(e) => setCustomText(e.target.value)}
             placeholder="Atau ketik ucapan Anda di sini jika sedang di tempat bising…"

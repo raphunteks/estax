@@ -211,14 +211,14 @@ export default function DoctorSlider() {
             defaults: { ease: "power3.out" },
             scrollTrigger: { trigger: root.current, start: "top 70%", once: true },
           });
-          tl.fromTo(".cs-bg", { scale: 1.14, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.6 }, 0)
-            .fromTo(".cs-heading", { y: -28, opacity: 0 }, { y: 0, opacity: 1, duration: 1 }, 0.05)
-            .fromTo(".cs-portrait", { y: 95, opacity: 0 }, { y: 0, opacity: 1, duration: 1.05, stagger: 0.09 }, 0.1)
-            .fromTo(".cs-ring", { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.6 }, 0.2)
-            .fromTo(".cs-info", { x: -45, opacity: 0 }, { x: 0, opacity: 1, duration: 1 }, 0.25)
-            .fromTo(".cs-hud", { x: 45, opacity: 0 }, { x: 0, opacity: 1, duration: 1 }, 0.35)
-            .fromTo(".cs-bar", { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 1 }, 0.45)
-            .fromTo(".cs-ground", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 1.4 }, 0.2)
+          tl.fromTo(".cs-bg", { scale: 1.08 }, { scale: 1, duration: 1.2 }, 0)
+            .fromTo(".cs-heading", { y: -16 }, { y: 0, duration: 0.8 }, 0.05)
+            .fromTo(".cs-portrait", { y: 40 }, { y: 0, duration: 0.85, stagger: 0.07 }, 0.1)
+            .fromTo(".cs-ring", { scale: 0.85 }, { scale: 1, duration: 1.2 }, 0.15)
+            .fromTo(".cs-info", { x: -24 }, { x: 0, duration: 0.8 }, 0.2)
+            .fromTo(".cs-hud", { x: 24 }, { x: 0, duration: 0.8 }, 0.25)
+            .fromTo(".cs-bar", { y: 16 }, { y: 0, duration: 0.8 }, 0.3)
+            .fromTo(".cs-ground", { scaleX: 0 }, { scaleX: 1, duration: 1.1 }, 0.15)
             .set([".cs-info", ".cs-hud"], { clearProps: "transform" });
 
           // Light parallax drift of the whole section while it crosses the viewport.
@@ -456,9 +456,9 @@ export default function DoctorSlider() {
                       alt={`${doc.name}, ${doc.role.id}`}
                       width={1080}
                       height={1440}
-                      sizes="(min-width:1024px) 400px, 60vw"
-                      priority={i < 3}
-                      loading={i < 3 ? "eager" : undefined}
+                      sizes="(min-width:1024px) 380px, 56vw"
+                      priority={i === 0}
+                      loading={i === 0 ? "eager" : "lazy"}
                       draggable={false}
                       className="pointer-events-none h-auto w-full [filter:drop-shadow(0_30px_40px_rgb(0_0_0/0.35))]"
                     />
@@ -518,10 +518,10 @@ export default function DoctorSlider() {
             <button type="button" className="press grid size-12 place-items-center rounded-full border border-line hover:border-accent disabled:opacity-35" onClick={() => api.current?.step(-1)} disabled={active === 0} aria-label={lang === "en" ? c.prev.en : c.prev.id}>
               <span aria-hidden="true">←</span>
             </button>
-            <div className="flex items-center gap-2 px-2" role="tablist" aria-label={lang === "en" ? c.select.en : c.select.id}>
+            <div className="flex items-center gap-1 px-1" role="group" aria-label={lang === "en" ? c.select.en : c.select.id}>
               {doctors.map((doc, i) => (
-                <button key={doc.id} type="button" role="tab" aria-selected={active === i} aria-label={doc.name} tabIndex={-1} onClick={() => api.current?.go(i)} className="grid size-6 place-items-center">
-                  <span className={`block rounded-full transition-all duration-500 ${active === i ? "h-2 w-8 bg-accent" : "size-2 bg-fg/25"}`} />
+                <button key={doc.id} type="button" aria-current={active === i ? "true" : undefined} aria-label={doc.name} onClick={() => api.current?.go(i)} className="grid min-h-11 min-w-9 place-items-center px-1">
+                  <span className={`block rounded-full transition-all duration-500 ${active === i ? "h-2 w-8 bg-accent" : "size-2 bg-fg/35"}`} />
                 </button>
               ))}
             </div>

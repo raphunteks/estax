@@ -55,7 +55,7 @@ function Users() {
     <div className="space-y-5">
       {manageable.length > 0 && (
         <Card title="Undang pengguna">
-          <form onSubmit={invite} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <form toolname="invite_team_user" tooldescription="Undang anggota tim baru (dokter, staf, atau apoteker) ke Estaka Dental Clinic." onSubmit={invite} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Nama"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} required minLength={2} /></Field>
             <Field label="Email"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} required /></Field>
             <Field label="Peran">
@@ -124,7 +124,7 @@ function Roles({ m }: { m: Matrix }) {
             {m.perms.map((p, i) => (
               <tr key={p} className="border-t border-line">
                 <td className="py-2 pr-4 font-mono text-xs">{p}</td>
-                {m.roles.map((r) => <td key={r} className="px-2 text-center">{m.allowed[r][i] ? <span className="text-accent" aria-label="diizinkan">✓</span> : <span className="text-muted/50" aria-label="tidak">–</span>}</td>)}
+                {m.roles.map((r) => <td key={r} className="px-2 text-center">{m.allowed[r][i] ? <span role="img" className="text-accent" aria-label="diizinkan">✓</span> : <span role="img" className="text-muted" aria-label="tidak">–</span>}</td>)}
               </tr>
             ))}
           </tbody>

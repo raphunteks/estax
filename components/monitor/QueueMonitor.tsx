@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FarmasiBoard, PoliBoard } from "@/lib/clinic/monitor";
 import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap-lite";
+import { registerWebMcp } from "@/lib/webmcp";
 
 type Kind = "poli" | "farmasi";
 type Board = PoliBoard | FarmasiBoard;
@@ -45,6 +46,7 @@ export default function QueueMonitor({ kind }: { kind: Kind }) {
   }, [kind]);
 
   useEffect(() => {
+    registerWebMcp();
     const first = setTimeout(poll, 0);
     const t = setInterval(poll, 2500);
     const c = setInterval(() => setNow(Date.now()), 1000);
@@ -71,7 +73,7 @@ export default function QueueMonitor({ kind }: { kind: Kind }) {
 
   useGSAP(() => {
     gsap.matchMedia().add(MOTION_OK, () => {
-      gsap.from("[data-in]", { y: 18, opacity: 0, duration: 0.8, stagger: 0.08, ease: "power3.out" });
+      gsap.from("[data-in]", { y: 18, duration: 0.8, stagger: 0.08, ease: "power3.out" });
     });
   }, { scope: root });
 
@@ -111,7 +113,19 @@ export default function QueueMonitor({ kind }: { kind: Kind }) {
       )}
 
       <main className="relative px-[4vw] pt-[3vh] pb-[4vh]">
-        {!board ? <div className="h-[50vh] animate-pulse rounded-[2rem] bg-white/5" aria-label="Memuat" /> : kind === "poli" ? <Poli b={board as PoliBoard} hero={hero} /> : <Farmasi b={board as FarmasiBoard} hero={hero} />}
+        {!board ? <div role="status" className="h-[50vh] animate-pulse rounded-[2rem] bg-white/5" aria-label="Memuat" /> : kind === "poli" ? <Poli b={board as PoliBoard} hero={hero} /> : <Farmasi b={board as FarmasiBoard} hero={hero} />}
+        <form
+          action={`/monitor-antrean-${kind === "poli" ? "poliklinik" : "farmasi"}`}
+          method="get"
+          toolname={`monitor_queue_${kind}`}
+          tooldescription={`Segarkan tampilan monitor antrean ${kind === "poli" ? "poliklinik" : "farmasi"} Estaka Dental Clinic.`}
+          className="sr-only"
+          aria-label="Segarkan monitor antrean"
+        >
+          <label htmlFor={`monitor-filter-${kind}`}>Filter ruang atau loket</label>
+          <input id={`monitor-filter-${kind}`} name="ruang" type="text" toolparamdescription="Nama dokter atau nomor loket (opsional)." />
+          <button type="submit">Segarkan</button>
+        </form>
       </main>
 
       {!sound && (
@@ -129,10 +143,10 @@ function Hero({ hero, no, line1, line2 }: { hero: React.RefObject<HTMLDivElement
   return (
     <div ref={hero} data-in className={`${glass} relative overflow-hidden p-[3vw] text-center`}>
       <div data-glow aria-hidden className="absolute inset-0 bg-[radial-gradient(closest-side,rgba(48,209,88,.5),transparent)] opacity-0" />
-      <p className="relative text-[clamp(.9rem,1.4vw,1.4rem)] tracking-[.2em] text-white/60 uppercase">Sedang dipanggil</p>
-      <p aria-live="assertive" className="relative text-[clamp(5rem,16vw,15rem)] leading-none font-semibold tracking-tight tabular-nums">{no ?? <span className="text-white/20">–</span>}</p>
+      <p className="relative text-[clamp(.9rem,1.4vw,1.4rem)] tracking-[.2em] text-white/75 uppercase">Sedang dipanggil</p>
+      <p aria-live="assertive" className="relative text-[clamp(5rem,16vw,15rem)] leading-none font-semibold tracking-tight tabular-nums">{no ?? <span className="text-white/60">–</span>}</p>
       <p className="relative text-[clamp(1.2rem,2.4vw,2.4rem)] font-medium">{line1}</p>
-      <p className="relative text-[clamp(.9rem,1.5vw,1.5rem)] text-white/60">{line2}</p>
+      <p className="relative text-[clamp(.9rem,1.5vw,1.5rem)] text-white/75">{line2}</p>
     </div>
   );
 }

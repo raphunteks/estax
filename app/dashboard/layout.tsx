@@ -8,7 +8,10 @@ import { getAuth } from "@/lib/auth/session";
 import { twoFaRequired } from "@/lib/auth/users";
 import { canAccessPath, navFor } from "@/lib/routes";
 
-export const metadata: Metadata = { title: { default: "Dashboard", template: "%s · Estaka" }, robots: { index: false } };
+export const metadata: Metadata = {
+  title: { default: "Dashboard Klinik", template: "%s · Estaka Dental Clinic" },
+  description: "Sistem informasi manajemen klinik gigi terpadu Estaka Dental Clinic Makassar.",
+};
 export const dynamic = "force-dynamic";
 const LIVE = ["/dashboard", "/dashboard/akun", "/dashboard/audit", "/dashboard/tim", "/dashboard/pengaturan", "/dashboard/pasien", "/dashboard/janji", "/dashboard/periksa", "/dashboard/situs", "/dashboard/kasir", "/dashboard/farmasi", "/dashboard/analitik", "/dashboard/ai", "/dashboard/promosi", "/dashboard/pesan", "/dashboard/survei", "/dashboard/recall"];
 

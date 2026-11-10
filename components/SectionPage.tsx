@@ -17,6 +17,24 @@ export default async function SectionPage({ page, children, ld = [] }: { page: P
       <main id="top">
         <h1 className="sr-only"><L v={p.h1Bi} /></h1>
         <SiteProvider value={site}>{children}</SiteProvider>
+        {page !== "reservasi" && (
+          <form
+            action="/reservasi"
+            method="get"
+            toolname="book_appointment"
+            tooldescription="Buat reservasi janji temu dokter gigi di Estaka Dental Clinic Makassar."
+            className="sr-only"
+            aria-label="Reservasi cepat"
+          >
+            <label htmlFor={`quick-book-name-${page}`}>Nama lengkap</label>
+            <input id={`quick-book-name-${page}`} name="nama" type="text" toolparamdescription="Nama lengkap pasien sesuai identitas." />
+            <label htmlFor={`quick-book-phone-${page}`}>Nomor WhatsApp</label>
+            <input id={`quick-book-phone-${page}`} name="wa" type="tel" toolparamdescription="Nomor WhatsApp aktif pasien (contoh: 08114440808)." />
+            <label htmlFor={`quick-book-service-${page}`}>Layanan</label>
+            <input id={`quick-book-service-${page}`} name="layanan" type="text" toolparamdescription="Jenis layanan gigi yang diinginkan (contoh: Scaling, Veneer, Implan, Ortodonti)." />
+            <button type="submit">Lanjut ke reservasi</button>
+          </form>
+        )}
       </main>
       <Footer />
       <Global />

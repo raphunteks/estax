@@ -78,7 +78,7 @@ export default function ThemeMenu({ align = "right", up = false, sheet }: { alig
         aria-expanded={open}
         aria-label={lang === "en" ? "Choose color theme" : "Pilih tema warna"}
         onClick={() => setOpen((o) => !o)}
-        className="grid size-10 place-items-center rounded-full border border-line bg-card/60 transition-[transform,background-color] hover:bg-card active:scale-95"
+        className="grid size-11 place-items-center rounded-full border border-line bg-card/60 transition-[transform,background-color] hover:bg-card active:scale-95"
       >
         <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
           <circle cx="12" cy="12" r="9" fill={sw[1]} />

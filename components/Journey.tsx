@@ -16,14 +16,14 @@ export default function Journey() {
       mm.add(MOTION_OK, () => {
         const steps = gsap.utils.toArray<HTMLElement>(".jr-step");
         const n = steps.length;
-        gsap.set(".jr-node", { scale: 0.55, opacity: 0.35 });
-        gsap.set(".jr-body", { y: 30, opacity: 0 });
+        gsap.set(".jr-node", { scale: 0.75 });
+        gsap.set(".jr-body", { y: 20 });
         const tl = gsap.timeline({ defaults: { ease: "none" }, scrollTrigger: { trigger: ".jr-list", start: "top 75%", end: "bottom 60%", scrub: 0.7 } });
         tl.fromTo(".jr-line-h", { scaleX: 0 }, { scaleX: 1, duration: n }, 0).fromTo(".jr-line-v", { scaleY: 0 }, { scaleY: 1, duration: n }, 0);
         steps.forEach((s, i) => {
           const at = i * (n / (n - 0.2)) * 0.9;
-          tl.to(s.querySelector(".jr-node"), { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2)" }, at)
-            .to(s.querySelector(".jr-body"), { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, at + 0.1);
+          tl.to(s.querySelector(".jr-node"), { scale: 1, duration: 0.5, ease: "back.out(2)" }, at)
+            .to(s.querySelector(".jr-body"), { y: 0, duration: 0.6, ease: "power3.out" }, at + 0.1);
         });
       });
     },

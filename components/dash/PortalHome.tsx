@@ -32,7 +32,7 @@ function Action({ href, icon: I, c, label, badge }: { href: string; icon: Lucide
     <Link href={href} style={tint(c)} className="group relative flex min-h-24 flex-col justify-between rounded-2xl border p-3 transition-transform active:scale-[0.97]">
       <I size={24} aria-hidden="true" style={{ color: "var(--t)" }} />
       <span className="flex items-end justify-between gap-1 text-sm font-medium leading-tight">{label}<ChevronRight size={16} className="shrink-0 text-muted" aria-hidden="true" /></span>
-      {badge ? <span className="absolute right-2 top-2 grid min-w-5 place-items-center rounded-full bg-[var(--bad)] px-1 text-[11px] font-semibold text-white" aria-label={`${badge} menunggu`}>{badge}</span> : null}
+      {badge ? <span className="absolute right-2 top-2 grid min-w-5 place-items-center rounded-full bg-rose-700 px-1 text-[11px] font-semibold text-white">{badge}<span className="sr-only"> menunggu</span></span> : null}
     </Link>
   );
 }

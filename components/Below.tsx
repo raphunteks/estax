@@ -19,30 +19,40 @@ export default function Below({ site }: { site: SiteContent }) {
   useEffect(() => registerWebMcp(), []);
 
   useEffect(() => {
-    const go = () => setOn("now");
+    let mounted = false;
+    const go = () => {
+      if (mounted) return;
+      mounted = true;
+      setOn("now");
+    };
     if (typeof window !== "undefined" && window.location.hash) {
       go();
       return;
     }
 
-    const evs = ["scroll", "wheel", "pointerdown", "touchstart", "keydown", "hashchange"] as const;
+    const onScroll = () => {
+      if (window.scrollY > 8) go();
+    };
+    const evs = ["wheel", "pointerdown", "touchstart", "keydown", "hashchange"] as const;
+    window.addEventListener("scroll", onScroll, { passive: true });
     evs.forEach((e) => window.addEventListener(e, go, { once: true, passive: true }));
 
     let obs: IntersectionObserver | null = null;
     if (triggerRef.current && typeof IntersectionObserver !== "undefined") {
       obs = new IntersectionObserver(
         (entries) => {
-          if (entries.some((e) => e.isIntersecting)) {
+          if (window.scrollY > 8 && entries.some((e) => e.isIntersecting)) {
             go();
             obs?.disconnect();
           }
         },
-        { rootMargin: "600px" }
+        { rootMargin: "120px" }
       );
       obs.observe(triggerRef.current);
     }
 
     return () => {
+      window.removeEventListener("scroll", onScroll);
       evs.forEach((e) => window.removeEventListener(e, go));
       obs?.disconnect();
     };
@@ -59,10 +69,26 @@ export default function Below({ site }: { site: SiteContent }) {
 
   if (on) return <Sections onReady={ready} staged={on === "staged"} site={site} />;
   return (
-    <div ref={triggerRef} aria-hidden="true" style={{ minHeight: "400vh" }}>
+    <div ref={triggerRef} style={{ minHeight: "200vh" }}>
       {ANCHORS.map((a) => (
-        <div key={a} id={a} />
+        <div key={a} id={a} aria-hidden="true" />
       ))}
+      <form
+        action="/reservasi"
+        method="get"
+        toolname="book_appointment"
+        tooldescription="Formulir cepat untuk mulai membuat janji temu dokter gigi secara online di Estaka Dental Clinic Makassar."
+        className="sr-only"
+      >
+        <label htmlFor="quick-bk-dokter">Pilih dokter gigi</label>
+        <input
+          id="quick-bk-dokter"
+          name="dokter"
+          type="text"
+          toolparamdescription="Nama dokter gigi yang ingin dipilih untuk reservasi janji temu (opsional)."
+        />
+        <button type="submit">Buat janji temu</button>
+      </form>
     </div>
   );
 }

@@ -57,10 +57,10 @@ export default function Technology() {
         gsap.utils.toArray<HTMLElement>(".tc-card").forEach((card, ci) => {
           const q = gsap.utils.selector(card);
           const tl = gsap.timeline({ scrollTrigger: { trigger: card, start: "top 80%", once: true }, defaults: { ease: "power3.out" } });
-          tl.from(card, { y: 60, opacity: 0, duration: 1 }, 0)
-            .from(q(".tc-draw"), { drawSVG: "0%", duration: 1.8, stagger: 0.12, ease: "power2.inOut" }, 0.2)
-            .from(q(".tc-dot"), { scale: 0, transformOrigin: "50% 50%", duration: 0.6, stagger: 0.05, ease: "back.out(2)" }, 0.5)
-            .from(q(".tc-text"), { y: 20, opacity: 0, duration: 0.9, stagger: 0.1 }, 0.4);
+          tl.from(card, { y: 36, duration: 0.85 }, 0)
+            .from(q(".tc-draw"), { drawSVG: "0%", duration: 1.6, stagger: 0.1, ease: "power2.inOut" }, 0.15)
+            .from(q(".tc-dot"), { scale: 0, transformOrigin: "50% 50%", duration: 0.5, stagger: 0.04, ease: "back.out(2)" }, 0.4)
+            .from(q(".tc-text"), { y: 16, duration: 0.75, stagger: 0.08 }, 0.3);
 
           const scan = q(".tc-scan, .tc-scan-glow");
           if (scan.length) {

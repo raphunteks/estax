@@ -39,13 +39,31 @@ export default function Hero() {
   useEffect(() => {
     // Decide once on mount; a visitor who is already scrolling keeps the static hero (no late pin jump).
     if (!roomCapable() || window.scrollY > 40) return;
-    wantsRoom.current = true;
-    // Warm the chunk immediately so the swap is near-instant and the static hero shows only for a blink.
-    void import("./hero3d/HeroRoom");
-    const go = () => setRoom(true);
-    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
-    if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 600 });
-    else setTimeout(go, 200);
+    if (new URLSearchParams(window.location.search).get("room") === "on") {
+      wantsRoom.current = true;
+      const t = setTimeout(() => setRoom(true), 0);
+      return () => clearTimeout(t);
+    }
+    // Load the 3D WebGL scene only after real pointer interaction near the top of the page so initial load has 0ms TBT and 0 CLS.
+    let done = false;
+    const activate = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("pointermove", activate);
+      window.removeEventListener("pointerdown", activate);
+      if (window.scrollY > 20) return;
+      wantsRoom.current = true;
+      void import("./hero3d/HeroRoom").then(() => {
+        if (window.scrollY <= 20) setRoom(true);
+      });
+    };
+    window.addEventListener("pointermove", activate, { once: true, passive: true });
+    window.addEventListener("pointerdown", activate, { once: true, passive: true });
+    return () => {
+      done = true;
+      window.removeEventListener("pointermove", activate);
+      window.removeEventListener("pointerdown", activate);
+    };
   }, []);
 
   useLazyGsap(root, ({ gsap, MOTION_OK, FINE_POINTER }) => {
@@ -97,9 +115,9 @@ export default function Hero() {
   });
 
   return (
-    <section id="top" ref={root} data-room={room ? "on" : undefined} className="group relative flex min-h-dvh items-center overflow-hidden pt-[72px] data-[room=on]:h-dvh data-[room=on]:items-start data-[room=on]:pt-24 lg:data-[room=on]:items-center lg:data-[room=on]:pt-[72px]">
+    <section id="top" ref={root} data-room={room ? "on" : undefined} className="group relative flex min-h-dvh items-center overflow-hidden pt-[72px]">
       {room && <HeroRoom section={root} />}
-      <div className="pointer-events-none absolute inset-0 -z-10 group-data-[room=on]:hidden" aria-hidden="true">
+      <div className="pointer-events-none absolute inset-0 -z-10 group-data-[room=on]:opacity-0" aria-hidden="true">
         <div className="h-glow glow-pulse absolute -right-32 top-1/4 size-[640px] rounded-full blur-3xl" style={{ background: "radial-gradient(closest-side, var(--glow), transparent)" }} />
         <div className="absolute inset-0" style={{ background: "radial-gradient(1200px 600px at 20% 0%, var(--surface2), transparent 70%)" }} />
         <div className="grain absolute inset-0" />
@@ -126,7 +144,7 @@ export default function Hero() {
           </div>
         </div>
 
-        <div className="h-media-wrap relative mx-auto group-data-[room=on]:hidden aspect-square w-full min-h-[300px] max-w-[320px] sm:min-h-[400px] sm:max-w-[420px] lg:min-h-[500px] lg:max-w-[520px]" aria-hidden="true">
+        <div className="h-media-wrap relative mx-auto group-data-[room=on]:invisible group-data-[room=on]:pointer-events-none aspect-square w-full min-h-[300px] max-w-[320px] sm:min-h-[400px] sm:max-w-[420px] lg:min-h-[500px] lg:max-w-[520px]" aria-hidden="true">
           <div className="hero-a h-media size-full">
             <svg viewBox="0 0 600 600" width="600" height="600" className="size-full overflow-visible">
               <defs>

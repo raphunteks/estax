@@ -24,7 +24,7 @@ function Fld({ k, label, err, hint, children }: { k: string; label: string; err?
       <label htmlFor={k} className="block text-sm font-medium">{label}</label>
       {children}
       {hint && !err && <p className="mt-1 text-xs text-muted">{hint}</p>}
-      {err && <p id={`${k}-e`} role="alert" className="mt-1 text-xs text-red-400">{err}</p>}
+      {err && <p id={`${k}-e`} role="alert" className="mt-1 text-xs text-[var(--bad)]">{err}</p>}
     </div>
   );
 }
@@ -71,7 +71,7 @@ export default function RegisterWizard({ staff = false }: { staff?: boolean }) {
 
   const set = (k: string, val: string | boolean | string[]) => setV((x) => ({ ...x, [k]: val }));
   const text = (k: string, extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
-    <input id={k} value={v[k] as string} onChange={(e) => set(k, e.target.value)} aria-invalid={Boolean(errs[k])} aria-describedby={errs[k] ? `${k}-e` : undefined} className={inputCls} {...extra} />
+    <input id={k} name={k} toolparamdescription={`Isian ${k} pendaftaran pasien Estaka Dental Clinic.`} value={v[k] as string} onChange={(e) => set(k, e.target.value)} aria-invalid={Boolean(errs[k])} aria-describedby={errs[k] ? `${k}-e` : undefined} className={inputCls} {...extra} />
   );
   function check(schema: ZodType, data: V) {
     const r = schema.safeParse(data);
@@ -164,20 +164,26 @@ export default function RegisterWizard({ staff = false }: { staff?: boolean }) {
                 </li>
               ))}
             </ol>
-            <form onSubmit={submit} noValidate className="glass mt-4 rounded-3xl p-6 sm:p-8">
+            <form
+              toolname={staff ? "register_clinic_patient" : "register_patient_account"}
+              tooldescription="Formulir pendaftaran pasien baru Estaka Dental Clinic."
+              onSubmit={submit}
+              noValidate
+              className="glass mt-4 rounded-3xl p-6 sm:p-8"
+            >
               <div className="wz-step grid gap-4 sm:grid-cols-2">
-                {!staff && <input tabIndex={-1} autoComplete="off" aria-hidden="true" className="absolute -left-[9999px] size-0 opacity-0" name="website" value={(v.website as string) ?? ""} onChange={(e) => set("website", e.target.value)} />}
+                {!staff && <input tabIndex={-1} autoComplete="off" aria-hidden="true" aria-label="Website" toolparamdescription="Jangan diisi (proteksi spam)." className="absolute -left-[9999px] size-0 opacity-0" name="website" value={(v.website as string) ?? ""} onChange={(e) => set("website", e.target.value)} />}
                 {step === 0 && (
                   <>
                     <Fld k="idType" err={errs.idType} label="Kewarganegaraan">
-                      <select id="idType" value={v.idType as string} onChange={(e) => set("idType", e.target.value)} className={inputCls}><option value="wni">WNI (NIK)</option><option value="wna">WNA (paspor)</option></select>
+                      <select id="idType" name="idType" toolparamdescription="Kewarganegaraan pasien (wni untuk NIK, wna untuk paspor)." value={v.idType as string} onChange={(e) => set("idType", e.target.value)} className={inputCls}><option value="wni">WNI (NIK)</option><option value="wna">WNA (paspor)</option></select>
                     </Fld>
                     <Fld k="idNumber" err={errs.idNumber} label={v.idType === "wni" ? "NIK (16 digit)" : "Nomor paspor"} hint="Disimpan terenkripsi dan hanya tampil sebagian.">{text("idNumber", { inputMode: v.idType === "wni" ? "numeric" : "text", maxLength: v.idType === "wni" ? 16 : 20, autoComplete: "off" })}</Fld>
                     <div className="sm:col-span-2"><Fld k="name" err={errs.name} label="Nama lengkap">{text("name", { autoComplete: "name" })}</Fld></div>
                     <Fld k="email" err={errs.email} label={staff ? "Email (opsional, untuk akun portal)" : "Email"}>{text("email", { type: "email", autoComplete: "email" })}</Fld>
                     <Fld k="phone" err={errs.phone} label="No. HP (WhatsApp)">{text("phone", { type: "tel", inputMode: "tel", autoComplete: "tel", placeholder: "0812…" })}</Fld>
                     <Fld k="gender" err={errs.gender} label="Jenis kelamin">
-                      <select id="gender" value={v.gender as string} onChange={(e) => set("gender", e.target.value)} className={inputCls}><option value="">Pilih</option><option value="L">Laki-laki</option><option value="P">Perempuan</option></select>
+                      <select id="gender" name="gender" toolparamdescription="Jenis kelamin pasien (L untuk Laki-laki, P untuk Perempuan)." value={v.gender as string} onChange={(e) => set("gender", e.target.value)} className={inputCls}><option value="">Pilih</option><option value="L">Laki-laki</option><option value="P">Perempuan</option></select>
                     </Fld>
                     <Fld k="birthPlace" err={errs.birthPlace} label="Tempat lahir">{text("birthPlace")}</Fld>
                     <div className="sm:col-span-2">
@@ -215,9 +221,9 @@ export default function RegisterWizard({ staff = false }: { staff?: boolean }) {
                       </div>
                     </fieldset>
                     <Fld k="conditionsOther" err={errs.conditionsOther} label="Penyakit lain">{text("conditionsOther")}</Fld>
-                    <Fld k="smoker" err={errs.smoker} label="Merokok"><select id="smoker" value={v.smoker as string} onChange={(e) => set("smoker", e.target.value)} className={inputCls}><option value="tidak">Tidak</option><option value="kadang">Kadang</option><option value="ya">Ya</option></select></Fld>
-                    <Fld k="bloodType" err={errs.bloodType} label="Golongan darah"><select id="bloodType" value={v.bloodType as string} onChange={(e) => set("bloodType", e.target.value)} className={inputCls}><option value="">Tidak tahu</option>{["A", "B", "AB", "O"].map((b) => <option key={b}>{b}</option>)}</select></Fld>
-                    {v.gender === "P" && <Fld k="pregnant" err={errs.pregnant} label="Kondisi khusus"><select id="pregnant" value={v.pregnant as string} onChange={(e) => set("pregnant", e.target.value)} className={inputCls}><option value="">Tidak ada</option><option value="hamil">Hamil</option><option value="menyusui">Menyusui</option></select></Fld>}
+                    <Fld k="smoker" err={errs.smoker} label="Merokok"><select id="smoker" name="smoker" toolparamdescription="Status merokok pasien." value={v.smoker as string} onChange={(e) => set("smoker", e.target.value)} className={inputCls}><option value="tidak">Tidak</option><option value="kadang">Kadang</option><option value="ya">Ya</option></select></Fld>
+                    <Fld k="bloodType" err={errs.bloodType} label="Golongan darah"><select id="bloodType" name="bloodType" toolparamdescription="Golongan darah pasien." value={v.bloodType as string} onChange={(e) => set("bloodType", e.target.value)} className={inputCls}><option value="">Tidak tahu</option>{["A", "B", "AB", "O"].map((b) => <option key={b}>{b}</option>)}</select></Fld>
+                    {v.gender === "P" && <Fld k="pregnant" err={errs.pregnant} label="Kondisi khusus"><select id="pregnant" name="pregnant" toolparamdescription="Kondisi kehamilan atau menyusui." value={v.pregnant as string} onChange={(e) => set("pregnant", e.target.value)} className={inputCls}><option value="">Tidak ada</option><option value="hamil">Hamil</option><option value="menyusui">Menyusui</option></select></Fld>}
                     <Fld k="occupation" err={errs.occupation} label="Pekerjaan (opsional)">{text("occupation")}</Fld>
                     <Fld k="emName" err={errs.emName} label={age !== null && age < 17 ? "Nama wali" : "Kontak darurat"}>{text("emName")}</Fld>
                     <Fld k="emRelation" err={errs.emRelation} label="Hubungan">{text("emRelation")}</Fld>
@@ -227,10 +233,10 @@ export default function RegisterWizard({ staff = false }: { staff?: boolean }) {
                     {!staff && <Fld k="password2" err={errs.password2} label="Ulangi kata sandi">{text("password2", { type: "password", autoComplete: "new-password" })}</Fld>}
                     {!staff && <div className="sm:col-span-2">
                       <label className="flex items-start gap-3 text-sm">
-                        <input name="registerwizard-input-230" type="checkbox" checked={v.consent as boolean} onChange={(e) => set("consent", e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
+                        <input name="registerwizard-input-230" toolparamdescription="Persetujuan pemrosesan data kesehatan pasien." type="checkbox" checked={v.consent as boolean} onChange={(e) => set("consent", e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-[var(--accent)]" />
                         <span>Saya menyatakan data benar dan menyetujui klinik memproses data kesehatan saya untuk keperluan pelayanan.</span>
                       </label>
-                      {errs.consent && <p role="alert" className="mt-1 text-xs text-red-400">{errs.consent}</p>}
+                      {errs.consent && <p role="alert" className="mt-1 text-xs text-[var(--bad)]">{errs.consent}</p>}
                     </div>}
                     {!staff && SITE_KEY && <div className="overflow-x-auto sm:col-span-2"><ReCAPTCHA ref={cap} sitekey={SITE_KEY} onChange={setCaptcha} onExpired={() => setCaptcha(null)} theme="dark" /></div>}
                   </>
@@ -245,7 +251,7 @@ export default function RegisterWizard({ staff = false }: { staff?: boolean }) {
                   </span>
                 </div>
               )}
-              <p role="alert" className="mt-3 min-h-5 text-sm text-red-400">{top}</p>
+              <p role="alert" className="mt-3 min-h-5 text-sm text-[var(--bad)]">{top}</p>
               <div className="mt-4 flex justify-between gap-3">
                 <button type="button" onClick={() => (setErrs({}), setStep(step - 1))} disabled={step === 0} className="btn btn-ghost disabled:invisible">Kembali</button>
                 {step < 2 ? <button key="next" type="button" onClick={next} className="btn btn-primary">Lanjut</button> : <button key="submit" className="btn btn-primary disabled:opacity-50" disabled={busy}>{busy ? "Mengirim…" : "Daftar"}</button>}

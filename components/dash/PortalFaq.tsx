@@ -94,10 +94,10 @@ export default function PortalFaq() {
         </p>
       )}
 
-      <form onSubmit={(e) => { e.preventDefault(); void send(q); }} className="sticky bottom-24 mt-4 flex items-end gap-2 rounded-2xl border border-line bg-bg p-2 shadow-lg md:bottom-4">
+      <form toolname="ask_ai_assistant" tooldescription="Kirim pertanyaan seputar layanan, jadwal, atau biaya ke Asisten AI Estaka Dental Clinic." onSubmit={(e) => { e.preventDefault(); void send(q); }} className="sticky bottom-24 mt-4 flex items-end gap-2 rounded-2xl border border-line bg-bg p-2 shadow-lg md:bottom-4">
         <label htmlFor="faq-q" className="sr-only">Pertanyaan Anda</label>
         <textarea
-          id="faq-q" rows={1} maxLength={500} value={q} placeholder="Tulis pertanyaan Anda…"
+          id="faq-q" name="question" toolparamdescription="Pertanyaan Anda mengenai layanan, jadwal dokter, atau estimasi biaya." rows={1} maxLength={500} value={q} placeholder="Tulis pertanyaan Anda…"
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(q); } }}
           className="max-h-32 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm outline-none"

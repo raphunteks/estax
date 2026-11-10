@@ -94,7 +94,7 @@ export function ExamWorkspace({ id, role }: { id: string; role: "superadmin" | "
     return (
       <Card title="Akses rekam medis">
         <p className="mb-3 text-sm text-muted">Akses superadmin ke rekam medis klinis harus beralasan dan dicatat di audit.</p>
-        <form className="flex flex-wrap items-end gap-2" onSubmit={(e) => (e.preventDefault(), reason.trim().length >= 5 && load(reason.trim()).then(() => setErr("")))}>
+        <form toolname="audit_medical_record_access" tooldescription="Catat alasan akses superadmin ke rekam medis klinis." className="flex flex-wrap items-end gap-2" onSubmit={(e) => (e.preventDefault(), reason.trim().length >= 5 && load(reason.trim()).then(() => setErr("")))}>
           <Field label="Alasan akses"><Input value={reason} onChange={(e) => setReason(e.target.value)} minLength={5} required /></Field>
           <button className="btn btn-primary min-h-11" type="submit">Buka</button>
         </form>

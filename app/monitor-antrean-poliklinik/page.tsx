@@ -4,7 +4,10 @@ import QueueMonitor from "@/components/monitor/QueueMonitor";
 import { getAuth } from "@/lib/auth/session";
 import { MONITOR_ROLES } from "@/lib/clinic/monitor";
 
-export const metadata: Metadata = { title: "Monitor antrean poliklinik", robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: "Monitor Antrean Poliklinik",
+  description: "Layar monitor antrean ruang tunggu poliklinik gigi Estaka Dental Clinic Makassar.",
+};
 export const dynamic = "force-dynamic";
 
 export default async function Page() {

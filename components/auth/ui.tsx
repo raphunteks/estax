@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { MOTION_OK, gsap, useGSAP } from "@/lib/gsap-lite";
 import Logo from "@/components/Logo";
+import { registerWebMcp } from "@/lib/webmcp";
 
 export const inputCls =
   "mt-1.5 min-h-12 w-full rounded-xl border border-line bg-bg px-4 text-base outline-none transition-colors duration-150 focus:border-accent";
@@ -12,11 +13,14 @@ export const btnCls = "btn btn-primary w-full disabled:opacity-50";
 /** Centered auth card. Enters with a short ease-out rise (rare event, 400ms); static under reduced motion. */
 export function AuthShell({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    registerWebMcp();
+  }, []);
   useGSAP(
     () => {
       gsap.matchMedia().add(MOTION_OK, () => {
-        gsap.from(".au-card", { y: 14, opacity: 0, scale: 0.98, duration: 0.45, ease: "power3.out" });
-        gsap.from(".au-in", { y: 8, opacity: 0, duration: 0.4, stagger: 0.05, delay: 0.1, ease: "power3.out", clearProps: "all" });
+        gsap.from(".au-card", { y: 10, scale: 0.99, duration: 0.35, ease: "power3.out" });
+        gsap.from(".au-in", { y: 6, duration: 0.3, stagger: 0.04, ease: "power3.out", clearProps: "transform" });
       });
     },
     { scope: root },

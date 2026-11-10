@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import PushPrompt from "@/components/dash/PushPrompt";
 import PortalNav, { PortalTabBar } from "@/components/dash/PortalNav";
@@ -6,6 +7,10 @@ import { homeFor } from "@/lib/auth/rbac";
 import { twoFaRequired } from "@/lib/auth/users";
 import { headers } from "next/headers";
 
+export const metadata: Metadata = {
+  title: { default: "Portal Pasien", template: "%s · Estaka Dental Clinic" },
+  description: "Portal pasien resmi Estaka Dental Clinic Makassar untuk jadwal janji temu, rekam medis gigi, dan tagihan.",
+};
 export const dynamic = "force-dynamic";
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
